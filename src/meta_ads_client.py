@@ -137,14 +137,19 @@ class MetaAdsClient:
             ])
 
             campaign_data = []
+            campaign_count = 0
             for campaign in campaigns:
+                campaign_count += 1
+                logger.info(f"📊 Processing campaign {campaign_count}: {campaign.get('name', 'Unknown')}")
+
                 # ALLE verfügbaren Insights-Felder abrufen!
-                insights = campaign.get_insights(
-                    params={
-                        'time_range': time_range,
-                        'level': 'campaign',
-                        'breakdowns': []  # Keine Breakdowns für Campaign-Level
-                    },
+                try:
+                    insights = campaign.get_insights(
+                        params={
+                            'time_range': time_range,
+                            'level': 'campaign',
+                            'breakdowns': []  # Keine Breakdowns für Campaign-Level
+                        },
                     fields=[
                         # Basic Info
                         'campaign_id',
@@ -212,7 +217,18 @@ class MetaAdsClient:
                         'estimated_ad_recall_rate',
                         'estimated_ad_recallers'
                     ]
-                )
+                    )
+
+                    insight_count = len(list(insights))
+                    logger.info(f"   Found {insight_count} insights for this campaign")
+
+                    if insight_count == 0:
+                        logger.warning(f"   ⚠️ No insights data for campaign - might be paused or no spend")
+                        continue
+
+                except Exception as e:
+                    logger.error(f"   ❌ Error getting insights for campaign: {str(e)}")
+                    continue
 
                 for insight in insights:
                     # Extract ALL actions
