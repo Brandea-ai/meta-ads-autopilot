@@ -126,6 +126,15 @@ def render_home_professional(meta_client):
             st.code(traceback.format_exc())
             return
 
+    # DEBUG: Show raw data structure
+    with st.expander("🔍 DEBUG: Rohdaten-Struktur (erste Zeile)", expanded=False):
+        if not df.empty:
+            st.write("**Verfügbare Spalten:**", list(df.columns))
+            st.write("**Erste Zeile (Rohformat):**")
+            first_row = df.iloc[0].to_dict()
+            for key, value in list(first_row.items())[:10]:  # Erste 10 Felder
+                st.write(f"- **{key}**: {type(value).__name__} = {str(value)[:100]}")
+
     # Extract actions (leads)
     df['leads'] = df['actions'].apply(lambda x: extract_action_value(x, 'lead'))
     df['link_clicks_action'] = df['actions'].apply(lambda x: extract_action_value(x, 'link_click'))
