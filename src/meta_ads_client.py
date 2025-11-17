@@ -119,9 +119,9 @@ class MetaAdsClient:
             return pd.DataFrame(cached_data)
 
         if not self.api_initialized:
-            logger.warning("⚠️ Using mock data - API not initialized")
-            logger.warning("⚠️ Check if META_ACCESS_TOKEN and META_AD_ACCOUNT_ID are set in secrets!")
-            return self._get_mock_campaign_data(days)
+            logger.error("❌ Meta Ads API not initialized")
+            logger.error("❌ Check if META_ACCESS_TOKEN and META_AD_ACCOUNT_ID are set correctly")
+            return pd.DataFrame()
 
         try:
             logger.info(f"🔍 Fetching REAL campaign data from Meta API (Account: {self.account_id})")
@@ -330,8 +330,7 @@ class MetaAdsClient:
         except Exception as e:
             logger.error(f"❌ Error fetching campaign data: {str(e)}")
             logger.error(f"❌ Check if your Meta Access Token is still valid!")
-            logger.error(f"❌ Falling back to MOCK DATA")
-            return self._get_mock_campaign_data(days)
+            return pd.DataFrame()
 
     def fetch_ad_performance(self, days: int = 7, start_date: Optional[str] = None, end_date: Optional[str] = None) -> pd.DataFrame:
         """
@@ -549,82 +548,9 @@ class MetaAdsClient:
             return df
 
         except Exception as e:
-            logger.error(f"Error fetching ad data: {str(e)}")
-            return self._get_mock_ad_data(days)
+            logger.error(f"❌ Error fetching ad data: {str(e)}")
+            return pd.DataFrame()
 
-    def _get_mock_campaign_data(self, days: int) -> pd.DataFrame:
-        """Generate mock campaign data for testing"""
-        import random
-
-        campaigns = [
-            'Herbst Aktion 2024',
-            'SUV Special',
-            'Limousinen Deal',
-            'Jahreswagen Angebot'
-        ]
-
-        data = []
-        for campaign in campaigns:
-            spend = random.uniform(200, 800)
-            impressions = random.randint(5000, 15000)
-            reach = int(impressions * random.uniform(0.6, 0.9))
-            frequency = impressions / reach
-            leads = random.randint(15, 45)
-            cpl = spend / leads
-
-            data.append({
-                'campaign_name': campaign,
-                'spend': round(spend, 2),
-                'impressions': impressions,
-                'reach': reach,
-                'frequency': round(frequency, 2),
-                'leads': leads,
-                'cpl': round(cpl, 2)
-            })
-
-        return pd.DataFrame(data)
-
-    def _get_mock_ad_data(self, days: int) -> pd.DataFrame:
-        """Generate mock ad data for testing"""
-        import random
-
-        ad_names = [
-            'SUV Video Hook Test A',
-            'Limousine Static Hero',
-            'Jahreswagen Carousel',
-            'SUV Video Hook Test B',
-            'Kombi Special Offer',
-            'Elektro Launch Campaign',
-            'Gebrauchtwagen Deal',
-            'Premium Fahrzeuge'
-        ]
-
-        data = []
-        for ad_name in ad_names:
-            spend = random.uniform(50, 200)
-            impressions = random.randint(1000, 5000)
-            leads = random.randint(3, 25)
-            cpl = spend / leads
-            video_plays_3s = int(impressions * random.uniform(0.15, 0.35))
-            thru_plays = int(video_plays_3s * random.uniform(0.3, 0.7))
-            hook_rate = (video_plays_3s / impressions * 100)
-            hold_rate = (thru_plays / video_plays_3s * 100)
-            frequency = random.uniform(1.1, 4.5)
-
-            data.append({
-                'ad_name': ad_name,
-                'spend': round(spend, 2),
-                'impressions': impressions,
-                'leads': leads,
-                'cpl': round(cpl, 2),
-                'video_plays_3s': video_plays_3s,
-                'thru_plays': thru_plays,
-                'hook_rate': round(hook_rate, 2),
-                'hold_rate': round(hold_rate, 2),
-                'frequency': round(frequency, 2)
-            })
-
-        return pd.DataFrame(data)
 
     def fetch_leads_data(self, days: int = 7, force_refresh: bool = False) -> pd.DataFrame:
         """

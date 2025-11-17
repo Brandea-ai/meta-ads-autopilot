@@ -144,54 +144,30 @@ def render_home():
         campaign_df = st.session_state.meta_client.fetch_campaign_data(days=30)
         ad_df = st.session_state.meta_client.fetch_ad_performance(days=30)
 
-    # CHECK IF MOCK DATA!
-    mock_campaign_names = ['Herbst Aktion 2024', 'SUV Special', 'Limousinen Deal', 'Jahreswagen Angebot']
-    mock_ad_names = ['SUV Video Hook Test A', 'Limousine Static Hero', 'Jahreswagen Carousel']
-
-    is_using_mock_data = False
-    if not campaign_df.empty:
-        is_using_mock_data = any(name in campaign_df['campaign_name'].values for name in mock_campaign_names)
-    elif not ad_df.empty:
-        is_using_mock_data = any(name in ad_df['ad_name'].values for name in mock_ad_names)
-
-    # Check API status
+    # Check API status and data availability
     api_status = st.session_state.meta_client.api_initialized
 
-    # Show warning if mock data
-    if is_using_mock_data:
+    if not api_status:
         st.error("""
-        ⚠️ **WARNUNG: MOCK-DATEN (TESTDATEN) WERDEN ANGEZEIGT!**
+        ❌ **Meta Ads API nicht verbunden**
 
-        Die Meta Ads API ist verbunden, aber gibt keine echten Daten zurück.
-
-        **Mögliche Gründe:**
-        - 📊 Deine Campaign hat **KEINE Ausgaben/Impressions** im gewählten Zeitraum (letzte 30 Tage)
-        - 🎯 Campaign ist **pausiert** oder hat **kein Budget**
-        - 📅 Campaign läuft erst in der **Zukunft** ("Nov - DEZ 2025")
-        - 🔑 Token hat **fehlende Permissions** (braucht: ads_read, business_management, leads_retrieval)
-
-        **Was du tun solltest:**
-        1. Prüfe in [Meta Ads Manager](https://www.facebook.com/adsmanager/) ob Campaigns **aktiv** sind
-        2. Prüfe ob Campaigns **Budget haben** und **Ausgaben** tätigen
-        3. Wenn Campaigns erst später starten → Warte bis sie aktiv sind
-
-        **API Status:** {'✅ Verbunden' if api_status else '❌ Nicht verbunden'}
+        Bitte prüfe deine API-Konfiguration in den Streamlit Cloud Secrets.
         """)
     elif campaign_df.empty and ad_df.empty:
         st.warning("""
-        ⚠️ **KEINE DATEN VERFÜGBAR**
+        ℹ️ **Keine Daten verfügbar**
 
-        Die Meta API ist verbunden, findet aber keine Campaigns mit Daten.
+        Die Meta API ist verbunden, findet aber keine Campaigns mit Ausgaben im gewählten Zeitraum.
 
-        **Gründe:**
+        **Mögliche Gründe:**
         - Keine aktiven Campaigns im Account
-        - Campaigns haben keine Ausgaben im Zeitraum (letzte 30 Tage)
-        - Campaigns sind pausiert
+        - Campaigns haben keine Ausgaben in den letzten 30 Tagen
+        - Campaigns sind pausiert oder haben kein Budget
 
-        **Lösung:** Erstelle eine Campaign mit Budget oder aktiviere bestehende Campaigns.
+        **Lösung:** Aktiviere Campaigns im [Meta Ads Manager](https://www.facebook.com/adsmanager/)
         """)
     else:
-        st.success(f"✅ **ECHTE DATEN von Meta Ads API!** | {len(campaign_df)} Campaigns, {len(ad_df)} Ads mit Daten")
+        st.success(f"✅ Daten erfolgreich geladen | {len(campaign_df)} Campaigns, {len(ad_df)} Ads")
 
     # Calculate metrics
     total_spend = campaign_df['spend'].sum() if not campaign_df.empty else 0
@@ -469,7 +445,7 @@ def render_weekly_report():
                 # Ad fatigue warnings
                 fatigued = ad_df[ad_df['ad_fatigue'] == True]
                 if not fatigued.empty:
-                    st.warning(f"⚠️ {len(fatigued)} Ads zeigen Anzeichen von Ad Fatigue (Frequency >6)")
+                    st.info(f"{len(fatigued)} Ads zeigen Anzeichen von Ad Fatigue (Frequency >6)")
             else:
                 st.info("Keine Daten verfügbar")
 
@@ -540,9 +516,7 @@ def render_monthly_report():
                 return
 
             # Split into current and previous month
-            # For demo, we'll use last 30 days vs previous 30 days
             current_month = st.session_state.meta_client.fetch_ad_performance(days=30)
-            # In production, you'd fetch previous 30 days specifically
 
             campaign_df = st.session_state.meta_client.fetch_campaign_data(days=30)
 
@@ -746,7 +720,7 @@ def render_leads_dashboard():
         leads_df = st.session_state.meta_client.fetch_leads_data(days=days, force_refresh=force_refresh)
 
     if leads_df.empty:
-        st.warning("⚠️ Keine Leads im gewählten Zeitraum gefunden")
+        st.info("Keine Leads im gewählten Zeitraum gefunden")
         st.info("""
         **Mögliche Gründe:**
         - Keine Lead-Formulare mit Submissions in diesem Zeitraum
@@ -921,7 +895,7 @@ def render_ai_chat():
         if load_data:
             st.success("✅ Daten aktiv")
         else:
-            st.warning("⚠️ Ohne Daten")
+            st.info("Ohne Live-Daten")
 
     # Fetch live data if enabled
     campaign_context = ""
@@ -986,7 +960,7 @@ def render_ai_chat():
                         st.markdown(leads_context)
 
             except Exception as e:
-                st.error(f"❌ Fehler beim Laden der Daten: {str(e)}")
+                st.error(f"Fehler beim Laden der Daten: {str(e)}")
                 load_data = False
 
     st.markdown("---")
@@ -1157,12 +1131,12 @@ Antworte auf Deutsch, präzise und umsetzbar."""
                         conversation += leads_context
 
                     conversation += "\n" + "="*60 + "\n"
-                    conversation += "⚠️ WICHTIG: Nutze diese AKTUELLEN Daten für deine Antwort!\n"
+                    conversation += "WICHTIG: Nutze diese AKTUELLEN Daten für deine Antwort!\n"
                     conversation += "Wenn der User nach Kampagnen, Ads oder Performance fragt,\n"
                     conversation += "beziehe dich auf die ECHTEN Zahlen oben!\n"
                     conversation += "="*60 + "\n\n"
                 else:
-                    conversation += "\n⚠️ HINWEIS: Keine Live-Daten geladen. Antworte allgemein.\n\n"
+                    conversation += "\nHINWEIS: Keine Live-Daten geladen. Antworte allgemein.\n\n"
 
                 # Add chat history for context
                 for msg in st.session_state.chat_history[-5:]:  # Last 5 messages for context
@@ -1184,7 +1158,7 @@ Antworte auf Deutsch, präzise und umsetzbar."""
                 st.rerun()
 
             except Exception as e:
-                st.error(f"❌ Fehler bei der AI-Antwort: {str(e)}")
+                st.error(f"Fehler bei der AI-Antwort: {str(e)}")
 
     # Export chat
     if st.session_state.chat_history:
@@ -1253,12 +1227,10 @@ def render_advanced_insights():
         ✅ **Tageszeiten**: Welche Stunden performen am besten?
         ✅ **Video-Retention**: 25%, 50%, 75%, 95%, 100% Completion Rate
         ✅ **Engagement**: Likes, Comments, Shares, Saves
-        ✅ **Echte Hook & Hold Rates** - keine Mock-Daten mehr!
 
-        **⚠️ WICHTIG:**
-        - **Demographics/Geographic/Placements/Devices** funktionieren NUR auf **AD-LEVEL**!
+        **Hinweis:**
+        - **Demographics/Geographic/Placements/Devices** funktionieren am besten auf **AD-LEVEL**
         - Wähle "Ad-Level" oben für vollständige Breakdowns
-        - Campaign/AdSet-Level zeigt nur Base Metrics
 
         Klicke auf "🔥 Analysieren" um die vollständige Analyse zu starten!
         """)
@@ -1337,9 +1309,9 @@ def render_advanced_insights():
                 fig = px.bar(age_summary, x='age', y='spend', title='Spend by Age Group')
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                st.warning("⚠️ Keine Age-Daten verfügbar")
+                st.info("Keine Age-Daten verfügbar")
         else:
-            st.warning("⚠️ Keine Age-Daten verfügbar")
+            st.info("Keine Age-Daten verfügbar")
 
         st.markdown("---")
 
@@ -1375,9 +1347,9 @@ def render_advanced_insights():
                 fig = px.pie(gender_summary, values='spend', names='gender', title='Spend by Gender')
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                st.warning("⚠️ Keine Gender-Daten verfügbar")
+                st.info("Keine Gender-Daten verfügbar")
         else:
-            st.warning("⚠️ Keine Gender-Daten verfügbar")
+            st.info("Keine Gender-Daten verfügbar")
 
         st.markdown("---")
 
@@ -1696,7 +1668,7 @@ def render_settings():
                 else:
                     st.warning(f"⚠️ Google Gemini API: Unerwartete Antwort")
             except Exception as e:
-                st.error(f"❌ Google Gemini API Fehler: {str(e)}")
+                st.error(f"Google Gemini API Fehler: {str(e)}")
 
             # Test Meta API
             if st.session_state.meta_client.api_initialized:
