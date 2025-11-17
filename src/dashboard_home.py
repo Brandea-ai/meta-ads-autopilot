@@ -57,23 +57,21 @@ def render_home_professional(meta_client):
 
     st.markdown("---")
 
-    # Fetch comprehensive data with ALL fields
+    # Fetch data with ALL 67 fields
     with st.spinner("🔥 Lade vollständige Daten..."):
         try:
-            # Fetch insights with all 67 fields
-            insights = meta_client.fetch_comprehensive_insights(
-                days=days,
-                level='ad'
-            )
+            # Fetch ad-level performance data (has all 67 fields)
+            df = meta_client.fetch_ad_performance(days=days)
 
-            if not insights or 'base' not in insights or insights['base'].empty:
+            if df.empty:
                 st.warning("Keine Daten für den gewählten Zeitraum verfügbar.")
+                st.info("Stelle sicher, dass Ads im gewählten Zeitraum aktiv waren.")
                 return
-
-            df = insights['base']
 
         except Exception as e:
             st.error(f"Fehler beim Laden der Daten: {str(e)}")
+            import traceback
+            st.code(traceback.format_exc())
             return
 
     # Extract actions (leads)

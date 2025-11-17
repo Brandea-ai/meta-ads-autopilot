@@ -304,9 +304,9 @@ def render_advanced_insights_professional(meta_client):
                 render_breakdown_section("Regionen / Bundesländer", region_summary, 'region', "📍")
                 st.markdown("---")
 
-        # DMA
-        if 'geographic_dma' in insights and not insights['geographic_dma'].empty:
-            dma_df = insights['geographic_dma']
+        # DMA (if available - optional breakdown)
+        if 'dma' in insights and not insights['dma'].empty:
+            dma_df = insights['dma']
 
             if 'dma' in dma_df.columns:
                 dma_summary = safe_aggregate(
@@ -330,7 +330,7 @@ def render_advanced_insights_professional(meta_client):
         st.markdown("Facebook, Instagram, Stories, Reels, Feed - wo performt was?")
         st.markdown("---")
 
-        # PUBLISHER PLATFORM
+        # PUBLISHER PLATFORM (if available)
         if 'publisher_platform' in insights and not insights['publisher_platform'].empty:
             platform_df = insights['publisher_platform']
 
