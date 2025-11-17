@@ -845,6 +845,91 @@ def render_ai_chat():
 
     st.markdown("---")
 
+    # Load LIVE DATA for Gemini context
+    st.markdown("### 📊 Live-Daten Status")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        load_data = st.checkbox("🔄 Live-Daten laden", value=True, help="Gibt Gemini Zugriff auf aktuelle Kampagnen-Daten")
+
+    with col2:
+        days_context = st.selectbox("Zeitraum", [7, 14, 30], index=0, help="Wie viele Tage Daten für Gemini")
+
+    with col3:
+        if load_data:
+            st.success("✅ Daten aktiv")
+        else:
+            st.warning("⚠️ Ohne Daten")
+
+    # Fetch live data if enabled
+    campaign_context = ""
+    ad_context = ""
+    leads_context = ""
+    metrics_summary = ""
+
+    if load_data:
+        with st.spinner("📥 Lade aktuelle Meta Ads Daten..."):
+            try:
+                # Get fresh data
+                campaign_df = st.session_state.meta_client.fetch_campaign_data(days=days_context)
+                ad_df = st.session_state.meta_client.fetch_ad_performance(days=days_context)
+                leads_df = st.session_state.meta_client.fetch_leads_data(days=days_context)
+
+                # Create context strings for Gemini
+                if not campaign_df.empty:
+                    campaign_context = f"\n\n📊 AKTUELLE KAMPAGNEN (letzte {days_context} Tage):\n"
+                    for idx, row in campaign_df.head(10).iterrows():
+                        campaign_context += f"- {row['campaign_name']}: Spend €{row['spend']:.2f}, Leads {row['leads']}, CPL €{row['cpl']:.2f}\n"
+
+                if not ad_df.empty:
+                    ad_context = f"\n\n🎯 TOP ADS (letzte {days_context} Tage):\n"
+                    top_ads = ad_df.nsmallest(5, 'cpl') if 'cpl' in ad_df.columns else ad_df.head(5)
+                    for idx, row in top_ads.iterrows():
+                        ad_context += f"- {row['ad_name']}: CPL €{row['cpl']:.2f}, Hook Rate {row.get('hook_rate', 0):.1f}%, Leads {row['leads']}\n"
+
+                if not leads_df.empty:
+                    leads_context = f"\n\n📞 LEADS (letzte {days_context} Tage):\n"
+                    leads_context += f"- Gesamt: {len(leads_df)} Leads\n"
+                    if 'ad_name' in leads_df.columns:
+                        top_lead_sources = leads_df['ad_name'].value_counts().head(3)
+                        leads_context += "- Top Lead-Quellen:\n"
+                        for ad_name, count in top_lead_sources.items():
+                            leads_context += f"  * {ad_name}: {count} Leads\n"
+
+                # Summary metrics
+                if not ad_df.empty:
+                    total_spend = ad_df['spend'].sum()
+                    total_leads = ad_df['leads'].sum()
+                    avg_cpl = total_spend / total_leads if total_leads > 0 else 0
+                    avg_hook_rate = ad_df['hook_rate'].mean() if 'hook_rate' in ad_df.columns else 0
+
+                    metrics_summary = f"""
+📈 ZUSAMMENFASSUNG (letzte {days_context} Tage):
+- Total Spend: €{total_spend:,.2f}
+- Total Leads: {int(total_leads):,}
+- Durchschnitt CPL: €{avg_cpl:.2f}
+- Durchschnitt Hook Rate: {avg_hook_rate:.1f}%
+- Anzahl aktive Ads: {len(ad_df)}
+"""
+
+                # Show data preview
+                with st.expander("👁️ Geladene Daten anzeigen", expanded=False):
+                    st.markdown("**Gemini hat Zugriff auf:**")
+                    st.markdown(metrics_summary)
+                    if campaign_context:
+                        st.markdown(campaign_context)
+                    if ad_context:
+                        st.markdown(ad_context)
+                    if leads_context:
+                        st.markdown(leads_context)
+
+            except Exception as e:
+                st.error(f"❌ Fehler beim Laden der Daten: {str(e)}")
+                load_data = False
+
+    st.markdown("---")
+
     # System Prompt Editor
     with st.expander("🔧 System-Prompt anzeigen/bearbeiten", expanded=False):
         st.markdown("**Aktueller System-Prompt:**")
@@ -923,19 +1008,43 @@ Antworte auf Deutsch, präzise und umsetzbar."""
 
     # Quick action buttons
     st.markdown("#### 🚀 Schnelle Fragen:")
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
+
+    quick_question = None
 
     with col1:
-        if st.button("📊 Wie kann ich CPL senken?"):
-            user_input = "Wie kann ich meinen Cost-per-Lead (CPL) senken? Gib mir konkrete, umsetzbare Tipps."
+        if st.button("📊 CPL analysieren", use_container_width=True):
+            if load_data and not ad_df.empty:
+                quick_question = f"Analysiere meine aktuellen CPL-Werte. Ich habe {len(ad_df)} Ads mit durchschnittlich €{avg_cpl:.2f} CPL. Welche Ads sollte ich optimieren und wie?"
+            else:
+                quick_question = "Wie kann ich meinen Cost-per-Lead (CPL) senken? Gib mir konkrete, umsetzbare Tipps."
 
     with col2:
-        if st.button("🎯 Content-Ideen für Ankauf"):
-            user_input = "Gib mir 5 kreative Content-Ideen für Auto-Ankauf Ads. Denk daran: Wir kaufen Autos, wir verkaufen nicht!"
+        if st.button("🎯 Top Performer", use_container_width=True):
+            if load_data and not ad_df.empty:
+                best_ad = ad_df.nsmallest(1, 'cpl').iloc[0]
+                quick_question = f"Warum performt '{best_ad['ad_name']}' so gut? (CPL: €{best_ad['cpl']:.2f}, Hook Rate: {best_ad.get('hook_rate', 0):.1f}%) Was kann ich davon lernen?"
+            else:
+                quick_question = "Was macht einen Top-Performer aus? Welche Eigenschaften sollte eine erfolgreiche Auto-Ankauf Ad haben?"
 
     with col3:
-        if st.button("⚠️ Warum niedrige Hook Rate?"):
-            user_input = "Meine Hook Rate ist niedrig. Was kann ich tun, um mehr Aufmerksamkeit in den ersten 3 Sekunden zu bekommen?"
+        if st.button("⚠️ Probleme finden", use_container_width=True):
+            if load_data and not ad_df.empty:
+                worst_ads = ad_df.nlargest(3, 'cpl')
+                quick_question = f"Ich habe {len(worst_ads)} problematische Ads. Analysiere die schlechtesten Performer und sag mir KONKRET was ich ändern muss."
+            else:
+                quick_question = "Wie erkenne ich problematische Ads? Welche Metriken sind Red Flags?"
+
+    with col4:
+        if st.button("💡 Content-Ideen", use_container_width=True):
+            if load_data and not ad_df.empty:
+                quick_question = f"Basierend auf meinen aktuellen Top-Performern: Gib mir 5 neue, kreative Content-Ideen für Auto-Ankauf Ads. Denk daran: Wir KAUFEN Autos!"
+            else:
+                quick_question = "Gib mir 5 kreative Content-Ideen für Auto-Ankauf Ads. Denk daran: Wir kaufen Autos, wir verkaufen nicht!"
+
+    # Use quick question if clicked
+    if quick_question:
+        user_input = quick_question
 
     # Chat input
     st.markdown("---")
@@ -965,8 +1074,34 @@ Antworte auf Deutsch, präzise und umsetzbar."""
         # Get AI response
         with st.spinner("🤖 Gemini denkt nach..."):
             try:
-                # Build conversation context
+                # Build conversation context with LIVE DATA
                 conversation = st.session_state.custom_chat_prompt + "\n\n"
+
+                # ADD LIVE DATA CONTEXT - Gemini sieht ALLE aktuellen Daten!
+                if load_data:
+                    conversation += "\n" + "="*60 + "\n"
+                    conversation += "🔴 LIVE-DATEN VON META ADS (AKTUELL!):\n"
+                    conversation += "="*60 + "\n"
+
+                    if metrics_summary:
+                        conversation += metrics_summary
+
+                    if campaign_context:
+                        conversation += campaign_context
+
+                    if ad_context:
+                        conversation += ad_context
+
+                    if leads_context:
+                        conversation += leads_context
+
+                    conversation += "\n" + "="*60 + "\n"
+                    conversation += "⚠️ WICHTIG: Nutze diese AKTUELLEN Daten für deine Antwort!\n"
+                    conversation += "Wenn der User nach Kampagnen, Ads oder Performance fragt,\n"
+                    conversation += "beziehe dich auf die ECHTEN Zahlen oben!\n"
+                    conversation += "="*60 + "\n\n"
+                else:
+                    conversation += "\n⚠️ HINWEIS: Keine Live-Daten geladen. Antworte allgemein.\n\n"
 
                 # Add chat history for context
                 for msg in st.session_state.chat_history[-5:]:  # Last 5 messages for context
