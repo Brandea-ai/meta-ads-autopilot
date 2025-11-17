@@ -527,7 +527,7 @@ class MetaAdsClient:
 
     def fetch_leads_data(self, days: int = 7, force_refresh: bool = False) -> pd.DataFrame:
         """
-        Fetch LIVE lead form data - NO CACHE for latest data!
+        Fetch LIVE lead form data via Pages API (works with Instant Forms)
 
         Args:
             days: Number of days to look back
@@ -541,57 +541,96 @@ class MetaAdsClient:
             return pd.DataFrame()
 
         try:
+            import requests
+
             # Calculate date range
             end_date = datetime.now()
             start_date = end_date - timedelta(days=days)
 
-            # Fetch all lead gen forms in account
-            lead_forms = self.account.get_lead_gen_forms()
+            # Get pages user has access to
+            response = requests.get(
+                'https://graph.facebook.com/v21.0/me/accounts',
+                params={'access_token': self.access_token, 'fields': 'id,name,access_token'}
+            )
+
+            if response.status_code != 200:
+                logger.error(f"Failed to get pages: {response.status_code}")
+                return pd.DataFrame()
+
+            pages = response.json().get('data', [])
+            logger.info(f"Found {len(pages)} pages")
 
             all_leads = []
-            for form in lead_forms:
-                # Get leads from this form
-                leads = form.get_leads(
-                    fields=[
-                        'id',
-                        'created_time',
-                        'ad_id',
-                        'ad_name',
-                        'form_id',
-                        'field_data'
-                    ]
+
+            for page in pages:
+                page_id = page.get('id')
+                page_name = page.get('name')
+                page_token = page.get('access_token')
+
+                # Get leadgen forms from this page
+                forms_resp = requests.get(
+                    f'https://graph.facebook.com/v21.0/{page_id}/leadgen_forms',
+                    params={'access_token': page_token, 'fields': 'id,name,status'}
                 )
 
-                for lead in leads:
-                    created_time_str = lead.get('created_time', '')
-                    if created_time_str:
-                        try:
-                            created_time = datetime.strptime(created_time_str, '%Y-%m-%dT%H:%M:%S%z')
-                        except:
-                            created_time = datetime.now()
+                if forms_resp.status_code != 200:
+                    logger.warning(f"Failed to get forms for page {page_name}")
+                    continue
 
-                        # Filter by date range
-                        if start_date <= created_time.replace(tzinfo=None) <= end_date:
-                            # Extract field data
-                            field_data = {}
-                            if 'field_data' in lead:
-                                for field in lead['field_data']:
-                                    field_data[field.get('name', 'unknown')] = field.get('values', [''])[0]
+                forms = forms_resp.json().get('data', [])
+                logger.info(f"Page '{page_name}': Found {len(forms)} forms")
 
-                            all_leads.append({
-                                'lead_id': lead.get('id'),
-                                'created_time': created_time.strftime('%Y-%m-%d %H:%M:%S'),
-                                'ad_name': lead.get('ad_name', 'Unknown'),
-                                'form_id': lead.get('form_id'),
-                                **field_data  # Add all form fields
-                            })
+                for form in forms:
+                    form_id = form.get('id')
+                    form_name = form.get('name')
+
+                    # Get leads from this form
+                    leads_resp = requests.get(
+                        f'https://graph.facebook.com/v21.0/{form_id}/leads',
+                        params={'access_token': page_token, 'fields': 'id,created_time,field_data'}
+                    )
+
+                    if leads_resp.status_code != 200:
+                        logger.warning(f"Failed to get leads for form {form_name}")
+                        continue
+
+                    leads = leads_resp.json().get('data', [])
+                    logger.info(f"Form '{form_name}': Retrieved {len(leads)} leads")
+
+                    for lead in leads:
+                        created_time_str = lead.get('created_time', '')
+                        if created_time_str:
+                            try:
+                                created_time = datetime.strptime(created_time_str, '%Y-%m-%dT%H:%M:%S%z')
+                            except:
+                                created_time = datetime.now()
+
+                            # Filter by date range
+                            if start_date <= created_time.replace(tzinfo=None) <= end_date:
+                                # Extract field data
+                                field_data = {}
+                                if 'field_data' in lead:
+                                    for field in lead['field_data']:
+                                        field_name = field.get('name', 'unknown')
+                                        field_value = field.get('values', [''])[0]
+                                        field_data[field_name] = field_value
+
+                                all_leads.append({
+                                    'lead_id': lead.get('id'),
+                                    'created_time': created_time.strftime('%Y-%m-%d %H:%M:%S'),
+                                    'form_name': form_name,
+                                    'page_name': page_name,
+                                    **field_data  # Add all form fields
+                                })
 
             df = pd.DataFrame(all_leads)
-            logger.info(f"Fetched {len(all_leads)} leads from last {days} days")
+            logger.info(f"✅ Fetched {len(all_leads)} leads from last {days} days")
             return df
 
         except Exception as e:
             logger.error(f"Error fetching leads: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
             return pd.DataFrame()
 
     def fetch_live_data(self, days: int = 7, start_date: Optional[str] = None, end_date: Optional[str] = None) -> Dict:
