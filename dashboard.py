@@ -21,6 +21,17 @@ from src.whatsapp_sender import WhatsAppSender
 from src.dashboard_home import render_home_professional
 from src.dashboard_advanced_insights import render_advanced_insights_professional
 
+
+def safe_select_columns(df, columns):
+    """
+    Safely select columns from DataFrame, only returning available ones
+    """
+    if df.empty:
+        return df
+    available_columns = [col for col in columns if col in df.columns]
+    return df[available_columns] if available_columns else df
+
+
 # Page config
 st.set_page_config(
     page_title="Meta Ads Autopilot",
@@ -425,8 +436,9 @@ def render_weekly_report():
             top_performers = st.session_state.data_processor.identify_top_performers(ad_df, 'cpl', 5)
 
             if not top_performers.empty:
+                display_cols = ['ad_name', 'spend', 'leads', 'cpl', 'hook_rate', 'hold_rate', 'frequency']
                 st.dataframe(
-                    top_performers[['ad_name', 'spend', 'leads', 'cpl', 'hook_rate', 'hold_rate', 'frequency']],
+                    safe_select_columns(top_performers, display_cols),
                     use_container_width=True,
                     hide_index=True
                 )
@@ -438,8 +450,9 @@ def render_weekly_report():
             underperformers = st.session_state.data_processor.identify_underperformers(ad_df, 'cpl', 5)
 
             if not underperformers.empty:
+                display_cols = ['ad_name', 'spend', 'leads', 'cpl', 'hook_rate', 'hold_rate', 'frequency']
                 st.dataframe(
-                    underperformers[['ad_name', 'spend', 'leads', 'cpl', 'hook_rate', 'hold_rate', 'frequency']],
+                    safe_select_columns(underperformers, display_cols),
                     use_container_width=True,
                     hide_index=True
                 )
@@ -541,8 +554,9 @@ def render_monthly_report():
         # Campaign Performance Table
         st.markdown("### Kampagnen Performance (30 Tage)")
         if not campaign_df.empty:
+            display_cols = ['campaign_name', 'spend', 'leads', 'cpl', 'frequency']
             st.dataframe(
-                campaign_df[['campaign_name', 'spend', 'leads', 'cpl', 'frequency']],
+                safe_select_columns(campaign_df, display_cols),
                 use_container_width=True,
                 hide_index=True
             )
@@ -616,16 +630,23 @@ def render_ad_performance():
         except:
             return ''
 
-    display_df = filtered_df[['ad_name', 'spend', 'leads', 'cpl', 'hook_rate',
-                               'hold_rate', 'frequency', 'performance_score']].copy()
+    display_cols = ['ad_name', 'spend', 'leads', 'cpl', 'hook_rate',
+                    'hold_rate', 'frequency', 'performance_score']
+    display_df = safe_select_columns(filtered_df, display_cols).copy()
 
-    # Format columns
-    display_df['spend'] = display_df['spend'].apply(lambda x: f"€{x:,.2f}")
-    display_df['cpl'] = display_df['cpl'].apply(lambda x: f"€{x:.2f}")
-    display_df['hook_rate'] = display_df['hook_rate'].apply(lambda x: f"{x:.1f}%")
-    display_df['hold_rate'] = display_df['hold_rate'].apply(lambda x: f"{x:.1f}%")
-    display_df['frequency'] = display_df['frequency'].apply(lambda x: f"{x:.2f}")
-    display_df['performance_score'] = display_df['performance_score'].apply(lambda x: f"{x:.0f}/100")
+    # Format columns (only if they exist)
+    if 'spend' in display_df.columns:
+        display_df['spend'] = display_df['spend'].apply(lambda x: f"€{x:,.2f}")
+    if 'cpl' in display_df.columns:
+        display_df['cpl'] = display_df['cpl'].apply(lambda x: f"€{x:.2f}")
+    if 'hook_rate' in display_df.columns:
+        display_df['hook_rate'] = display_df['hook_rate'].apply(lambda x: f"{x:.1f}%")
+    if 'hold_rate' in display_df.columns:
+        display_df['hold_rate'] = display_df['hold_rate'].apply(lambda x: f"{x:.1f}%")
+    if 'frequency' in display_df.columns:
+        display_df['frequency'] = display_df['frequency'].apply(lambda x: f"{x:.2f}")
+    if 'performance_score' in display_df.columns:
+        display_df['performance_score'] = display_df['performance_score'].apply(lambda x: f"{x:.0f}/100")
 
     st.dataframe(display_df, use_container_width=True, hide_index=True)
 
