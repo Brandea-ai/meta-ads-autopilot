@@ -989,42 +989,101 @@ def render_ai_chat():
                         axis=1
                     )
 
-                # Create context strings for Gemini
+                # Create COMPREHENSIVE context strings for Gemini with ALL metrics
                 if not campaign_df.empty:
-                    campaign_context = f"\n\n📊 AKTUELLE KAMPAGNEN (letzte {days_context} Tage):\n"
-                    for idx, row in campaign_df.head(10).iterrows():
-                        campaign_context += f"- {row['campaign_name']}: Spend €{row.get('spend', 0):.2f}, Leads {row.get('leads', 0)}, CPL €{row.get('cpl', 0):.2f}\n"
+                    campaign_context = f"\n\n{'='*80}\n📊 KAMPAGNEN-DATEN (letzte {days_context} Tage) - VOLLSTÄNDIG:\n{'='*80}\n"
+
+                    # Select important columns for campaigns
+                    campaign_cols = ['campaign_name', 'spend', 'impressions', 'reach', 'frequency',
+                                    'clicks', 'ctr', 'cpc', 'cpm', 'leads', 'cpl']
+                    available_campaign_cols = [col for col in campaign_cols if col in campaign_df.columns]
+
+                    # Convert to markdown table for better structure
+                    campaign_table = campaign_df[available_campaign_cols].to_markdown(index=False, floatfmt=".2f")
+                    campaign_context += campaign_table + "\n"
 
                 if not ad_df.empty:
-                    ad_context = f"\n\n🎯 TOP ADS (letzte {days_context} Tage):\n"
-                    top_ads = ad_df.nsmallest(5, 'cpl') if 'cpl' in ad_df.columns else ad_df.head(5)
-                    for idx, row in top_ads.iterrows():
-                        ad_context += f"- {row['ad_name']}: CPL €{row.get('cpl', 0):.2f}, Hook Rate {row.get('hook_rate', 0):.1f}%, Leads {row.get('leads', 0)}\n"
+                    ad_context = f"\n\n{'='*80}\n🎯 AD-PERFORMANCE DATEN (letzte {days_context} Tage) - ALLE ADS:\n{'='*80}\n"
+
+                    # Select ALL important ad columns
+                    ad_cols = ['ad_name', 'spend', 'impressions', 'reach', 'frequency', 'clicks',
+                              'ctr', 'cpc', 'cpm', 'leads', 'cpl', 'hook_rate', 'hold_rate',
+                              'video_plays', 'video_avg_time_watched']
+                    available_ad_cols = [col for col in ad_cols if col in ad_df.columns]
+
+                    # Show ALL ads, not just top 5
+                    ad_table = ad_df[available_ad_cols].to_markdown(index=False, floatfmt=".2f")
+                    ad_context += ad_table + "\n"
+
+                    # Add statistical insights
+                    ad_context += f"\n📈 AD STATISTIKEN:\n"
+                    ad_context += f"- Beste CPL: €{ad_df['cpl'].min():.2f} (Ad: {ad_df.loc[ad_df['cpl'].idxmin(), 'ad_name']})\n"
+                    ad_context += f"- Schlechteste CPL: €{ad_df['cpl'].max():.2f} (Ad: {ad_df.loc[ad_df['cpl'].idxmax(), 'ad_name']})\n"
+                    if 'hook_rate' in ad_df.columns:
+                        ad_context += f"- Beste Hook Rate: {ad_df['hook_rate'].max():.1f}% (Ad: {ad_df.loc[ad_df['hook_rate'].idxmax(), 'ad_name']})\n"
+                        ad_context += f"- Schlechteste Hook Rate: {ad_df['hook_rate'].min():.1f}% (Ad: {ad_df.loc[ad_df['hook_rate'].idxmin(), 'ad_name']})\n"
+                    if 'hold_rate' in ad_df.columns:
+                        ad_context += f"- Beste Hold Rate: {ad_df['hold_rate'].max():.1f}% (Ad: {ad_df.loc[ad_df['hold_rate'].idxmax(), 'ad_name']})\n"
 
                 if not leads_df.empty:
-                    leads_context = f"\n\n📞 LEADS (letzte {days_context} Tage):\n"
-                    leads_context += f"- Gesamt: {len(leads_df)} Leads\n"
-                    # Leads DataFrame now has form_name instead of ad_name
-                    if 'form_name' in leads_df.columns:
-                        top_lead_sources = leads_df['form_name'].value_counts().head(3)
-                        leads_context += "- Top Lead-Quellen:\n"
-                        for form_name, count in top_lead_sources.items():
-                            leads_context += f"  * {form_name}: {count} Leads\n"
+                    leads_context = f"\n\n{'='*80}\n📞 LEADS-DATEN (letzte {days_context} Tage) - ALLE INDIVIDUELLEN LEADS:\n{'='*80}\n"
+                    leads_context += f"Gesamt: {len(leads_df)} Leads\n\n"
 
-                # Summary metrics
+                    # Show lead form performance
+                    if 'form_name' in leads_df.columns:
+                        form_performance = leads_df['form_name'].value_counts()
+                        leads_context += "📋 LEAD-FORMULARE:\n"
+                        for form_name, count in form_performance.items():
+                            leads_context += f"- {form_name}: {count} Leads\n"
+
+                    # Show recent leads (last 10) with details
+                    if 'created_time' in leads_df.columns:
+                        leads_context += f"\n📅 LETZTE 10 LEADS (Details):\n"
+                        recent_leads = leads_df.sort_values('created_time', ascending=False).head(10)
+
+                        # Select available lead columns
+                        lead_display_cols = [col for col in leads_df.columns if col not in ['form_id', 'page_id']]
+                        lead_table = recent_leads[lead_display_cols].to_markdown(index=False)
+                        leads_context += lead_table + "\n"
+
+                # COMPREHENSIVE Summary metrics with ALL available data
+                metrics_summary = f"\n\n{'='*80}\n📊 GESAMT-ÜBERSICHT (letzte {days_context} Tage):\n{'='*80}\n"
+
                 if not ad_df.empty:
                     total_spend = ad_df['spend'].sum()
                     total_leads = ad_df['leads'].sum()
+                    total_impressions = ad_df['impressions'].sum()
+                    total_reach = ad_df['reach'].sum()
+                    total_clicks = ad_df['clicks'].sum()
                     avg_cpl = total_spend / total_leads if total_leads > 0 else 0
+                    avg_ctr = ad_df['ctr'].mean() if 'ctr' in ad_df.columns else 0
+                    avg_frequency = ad_df['frequency'].mean() if 'frequency' in ad_df.columns else 0
                     avg_hook_rate = ad_df['hook_rate'].mean() if 'hook_rate' in ad_df.columns else 0
+                    avg_hold_rate = ad_df['hold_rate'].mean() if 'hold_rate' in ad_df.columns else 0
 
-                    metrics_summary = f"""
-📈 ZUSAMMENFASSUNG (letzte {days_context} Tage):
+                    metrics_summary += f"""
+💰 BUDGET & KOSTEN:
 - Total Spend: €{total_spend:,.2f}
-- Total Leads: {int(total_leads):,}
 - Durchschnitt CPL: €{avg_cpl:.2f}
+- Durchschnitt CPC: €{ad_df['cpc'].mean():.2f}
+- Durchschnitt CPM: €{ad_df['cpm'].mean():.2f}
+
+📊 PERFORMANCE:
+- Total Leads: {int(total_leads):,}
+- Total Impressions: {int(total_impressions):,}
+- Total Reach: {int(total_reach):,}
+- Total Clicks: {int(total_clicks):,}
+- Durchschnitt CTR: {avg_ctr:.2f}%
+- Durchschnitt Frequency: {avg_frequency:.2f}
+
+🎥 VIDEO METRIKEN:
 - Durchschnitt Hook Rate: {avg_hook_rate:.1f}%
+- Durchschnitt Hold Rate: {avg_hold_rate:.1f}%
+
+📈 KAMPAGNEN INFO:
+- Anzahl Kampagnen: {len(campaign_df) if not campaign_df.empty else 0}
 - Anzahl aktive Ads: {len(ad_df)}
+- Anzahl Leads (Forms): {len(leads_df) if not leads_df.empty else 0}
 """
 
                 # Show data preview
