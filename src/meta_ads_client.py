@@ -723,46 +723,63 @@ class MetaAdsClient:
 
         time_range = {'since': start_date, 'until': end_date}
 
-        # ALLE verfügbaren Felder (getestet mit test_all_fields.py)
+        # ALLE 67 verfügbaren Fields mit ECHTEN Daten (getestet mit test_ALL_meta_fields.py)
         standard_fields = [
-            # IDs & Names
-            'account_id', 'account_name',
+            # IDs & Names & Dates
+            'account_id', 'account_name', 'account_currency',
             'ad_id', 'ad_name',
             'adset_id', 'adset_name',
             'campaign_id', 'campaign_name',
             'date_start', 'date_stop',
+            'created_time', 'updated_time',
 
             # Basic Metrics
             'spend', 'impressions', 'reach', 'frequency', 'clicks',
 
-            # CTR & Engagement
+            # CTR & Engagement - ERWEITERT!
             'ctr', 'unique_ctr',
             'inline_link_clicks', 'inline_link_click_ctr',
+            'unique_inline_link_clicks', 'unique_inline_link_click_ctr',
+            'unique_link_clicks_ctr',
             'unique_clicks',
+            'inline_post_engagement',  # NEU!
 
-            # Costs
+            # Costs - KOMPLETT!
             'cpc', 'cpm', 'cpp',
             'cost_per_inline_link_click',
             'cost_per_inline_post_engagement',
             'cost_per_unique_click',
             'cost_per_unique_inline_link_click',
+            'cost_per_action_type',
+            'cost_per_unique_action_type',
+            'cost_per_result',  # NEU! Cost per Lead/Conversion
+            'cost_per_thruplay',
+            'cost_per_15_sec_video_view',
 
             # Actions & Conversions
             'actions',
             'unique_actions',
-            'cost_per_action_type',
 
-            # Video Metrics (ALLE!)
+            # Results & Performance - NEU!
+            'results',  # Objective Results!
+            'result_rate',  # Conversion Rate!
+            'result_values_performance_indicator',
+            'link_clicks_per_results',  # Effizienz!
+
+            # Video Metrics (KOMPLETT!)
             'video_play_actions',
             'video_play_curve_actions',  # RETENTION CURVE!
             'video_avg_time_watched_actions',
+            'video_15_sec_watched_actions',
+            'video_30_sec_watched_actions',
             'video_p25_watched_actions',
             'video_p50_watched_actions',
             'video_p75_watched_actions',
             'video_p95_watched_actions',
             'video_p100_watched_actions',
             'video_thruplay_watched_actions',
-            'video_30_sec_watched_actions',
+            'video_view_per_impression',  # NEU! Video View Rate
+            'unique_video_view_15_sec',
 
             # Quality & Rankings
             'quality_ranking',
@@ -774,6 +791,7 @@ class MetaAdsClient:
             'buying_type',
             'objective',
             'optimization_goal',
+            'creative_media_type',  # NEU! Video/Image/Carousel
 
             # Website
             'website_ctr',
