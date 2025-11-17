@@ -12,6 +12,8 @@ from facebook_business.api import FacebookAdsApi
 from facebook_business.adobjects.adaccount import AdAccount
 from facebook_business.adobjects.campaign import Campaign
 from facebook_business.adobjects.ad import Ad
+from facebook_business.adobjects.lead import Lead
+from facebook_business.adobjects.page import Page
 from config import Config
 
 # Setup logging
@@ -330,3 +332,112 @@ class MetaAdsClient:
             })
 
         return pd.DataFrame(data)
+
+    def fetch_leads_data(self, days: int = 7, force_refresh: bool = False) -> pd.DataFrame:
+        """
+        Fetch LIVE lead form data - NO CACHE for latest data!
+
+        Args:
+            days: Number of days to look back
+            force_refresh: Always fetch fresh data (ignore cache)
+
+        Returns:
+            DataFrame with lead details
+        """
+        if not self.api_initialized:
+            logger.warning("API not initialized - cannot fetch leads")
+            return pd.DataFrame()
+
+        try:
+            # Calculate date range
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=days)
+
+            # Fetch all lead gen forms in account
+            lead_forms = self.account.get_lead_gen_forms()
+
+            all_leads = []
+            for form in lead_forms:
+                # Get leads from this form
+                leads = form.get_leads(
+                    fields=[
+                        'id',
+                        'created_time',
+                        'ad_id',
+                        'ad_name',
+                        'form_id',
+                        'field_data'
+                    ]
+                )
+
+                for lead in leads:
+                    created_time_str = lead.get('created_time', '')
+                    if created_time_str:
+                        try:
+                            created_time = datetime.strptime(created_time_str, '%Y-%m-%dT%H:%M:%S%z')
+                        except:
+                            created_time = datetime.now()
+
+                        # Filter by date range
+                        if start_date <= created_time.replace(tzinfo=None) <= end_date:
+                            # Extract field data
+                            field_data = {}
+                            if 'field_data' in lead:
+                                for field in lead['field_data']:
+                                    field_data[field.get('name', 'unknown')] = field.get('values', [''])[0]
+
+                            all_leads.append({
+                                'lead_id': lead.get('id'),
+                                'created_time': created_time.strftime('%Y-%m-%d %H:%M:%S'),
+                                'ad_name': lead.get('ad_name', 'Unknown'),
+                                'form_id': lead.get('form_id'),
+                                **field_data  # Add all form fields
+                            })
+
+            df = pd.DataFrame(all_leads)
+            logger.info(f"Fetched {len(all_leads)} leads from last {days} days")
+            return df
+
+        except Exception as e:
+            logger.error(f"Error fetching leads: {str(e)}")
+            return pd.DataFrame()
+
+    def fetch_live_data(self, days: int = 7) -> Dict:
+        """
+        Fetch LIVE data - bypasses cache completely!
+
+        Returns:
+            Dict with campaigns, ads, and leads
+        """
+        logger.info("Fetching LIVE data (no cache)...")
+
+        # Clear cache first for truly fresh data
+        self.clear_cache()
+
+        # Fetch fresh campaign data
+        campaigns = self.fetch_campaign_data(days=days)
+
+        # Fetch fresh ad data
+        ads = self.fetch_ad_performance(days=days)
+
+        # Fetch fresh leads
+        leads = self.fetch_leads_data(days=days, force_refresh=True)
+
+        return {
+            'campaigns': campaigns,
+            'ads': ads,
+            'leads': leads,
+            'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+
+    def clear_cache(self):
+        """Clear all cached data"""
+        cache_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'cache')
+        if os.path.exists(cache_dir):
+            for file in os.listdir(cache_dir):
+                if file.endswith('.json'):
+                    try:
+                        os.remove(os.path.join(cache_dir, file))
+                        logger.info(f"Cleared cache: {file}")
+                    except:
+                        pass
