@@ -812,18 +812,19 @@ class MetaAdsClient:
         results = {}
 
         try:
-            # Hol Ads
-            if level == 'ad':
-                objects = self.account.get_ads(fields=[Ad.Field.name, Ad.Field.status])
-            elif level == 'adset':
-                objects = self.account.get_ad_sets(fields=['name', 'status'])
-            else:
-                objects = self.account.get_campaigns(fields=[Campaign.Field.name, Campaign.Field.status])
+            # Helper function to get fresh objects for each breakdown
+            def get_objects():
+                if level == 'ad':
+                    return self.account.get_ads(fields=[Ad.Field.name, Ad.Field.status])
+                elif level == 'adset':
+                    return self.account.get_ad_sets(fields=['name', 'status'])
+                else:
+                    return self.account.get_campaigns(fields=[Campaign.Field.name, Campaign.Field.status])
 
             # 1. BASE INSIGHTS (keine Breakdowns)
             logger.info("📊 Fetching base insights...")
             base_data = []
-            for obj in objects:
+            for obj in get_objects():
                 insights = obj.get_insights(
                     params={'time_range': time_range},
                     fields=standard_fields
@@ -837,7 +838,7 @@ class MetaAdsClient:
             # 2. DEMOGRAPHICS - AGE
             logger.info("👥 Fetching age demographics...")
             age_data = []
-            for obj in objects:
+            for obj in get_objects():
                 insights = obj.get_insights(
                     params={'time_range': time_range, 'breakdowns': ['age']},
                     fields=standard_fields
@@ -851,7 +852,7 @@ class MetaAdsClient:
             # 3. DEMOGRAPHICS - GENDER
             logger.info("👥 Fetching gender demographics...")
             gender_data = []
-            for obj in objects:
+            for obj in get_objects():
                 insights = obj.get_insights(
                     params={'time_range': time_range, 'breakdowns': ['gender']},
                     fields=standard_fields
@@ -865,7 +866,7 @@ class MetaAdsClient:
             # 4. DEMOGRAPHICS - AGE + GENDER (kombiniert!)
             logger.info("👥 Fetching age+gender demographics...")
             age_gender_data = []
-            for obj in objects:
+            for obj in get_objects():
                 insights = obj.get_insights(
                     params={'time_range': time_range, 'breakdowns': ['age', 'gender']},
                     fields=standard_fields
@@ -879,7 +880,7 @@ class MetaAdsClient:
             # 5. GEOGRAPHIC - COUNTRY
             logger.info("🌍 Fetching country breakdown...")
             country_data = []
-            for obj in objects:
+            for obj in get_objects():
                 insights = obj.get_insights(
                     params={'time_range': time_range, 'breakdowns': ['country']},
                     fields=standard_fields
@@ -893,7 +894,7 @@ class MetaAdsClient:
             # 6. GEOGRAPHIC - REGION
             logger.info("🌍 Fetching region breakdown...")
             region_data = []
-            for obj in objects:
+            for obj in get_objects():
                 insights = obj.get_insights(
                     params={'time_range': time_range, 'breakdowns': ['region']},
                     fields=standard_fields
@@ -907,7 +908,7 @@ class MetaAdsClient:
             # 7. PLACEMENTS - Publisher Platform + Platform Position
             logger.info("📱 Fetching placement breakdown...")
             placement_data = []
-            for obj in objects:
+            for obj in get_objects():
                 insights = obj.get_insights(
                     params={'time_range': time_range, 'breakdowns': ['publisher_platform', 'platform_position']},
                     fields=standard_fields
@@ -921,7 +922,7 @@ class MetaAdsClient:
             # 8. DEVICES - Impression Device (besser als device_platform)
             logger.info("💻 Fetching device breakdown...")
             device_data = []
-            for obj in objects:
+            for obj in get_objects():
                 insights = obj.get_insights(
                     params={'time_range': time_range, 'breakdowns': ['impression_device']},
                     fields=standard_fields
@@ -935,7 +936,7 @@ class MetaAdsClient:
             # 9. HOURLY STATS
             logger.info("🕐 Fetching hourly breakdown...")
             hourly_data = []
-            for obj in objects:
+            for obj in get_objects():
                 insights = obj.get_insights(
                     params={'time_range': time_range, 'breakdowns': ['hourly_stats_aggregated_by_advertiser_time_zone']},
                     fields=standard_fields
