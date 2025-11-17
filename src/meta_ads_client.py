@@ -332,7 +332,7 @@ class MetaAdsClient:
             logger.error(f"❌ Check if your Meta Access Token is still valid!")
             return pd.DataFrame()
 
-    def fetch_ad_performance(self, days: int = 7, start_date: Optional[str] = None, end_date: Optional[str] = None) -> pd.DataFrame:
+    def fetch_ad_performance(self, days: int = 7, start_date: Optional[str] = None, end_date: Optional[str] = None, force_refresh: bool = False) -> pd.DataFrame:
         """
         Fetch ad-level performance data with video metrics and custom date range
 
@@ -352,10 +352,15 @@ class MetaAdsClient:
             start_date = (datetime.now() - timedelta(days=days-1)).strftime('%Y-%m-%d')
 
         cache_key = f"ads_{start_date}_{end_date}"
-        cached_data = self._load_from_cache(cache_key)
 
-        if cached_data is not None:
-            return pd.DataFrame(cached_data)
+        # Load from cache unless force refresh is requested
+        if not force_refresh:
+            cached_data = self._load_from_cache(cache_key)
+            if cached_data is not None:
+                logger.info(f"📦 Returning cached data for {cache_key}")
+                return pd.DataFrame(cached_data)
+        else:
+            logger.info(f"⚡ Force refresh - skipping cache for {cache_key}")
 
         if not self.api_initialized:
             logger.error("❌ Meta Ads API not initialized")

@@ -104,16 +104,17 @@ def render_home_professional(meta_client):
         st.markdown(f"**Zeitraum:** Letzte {days} Tage")
 
     with col3:
+        force_refresh = st.checkbox("⚡ Cache ignorieren", value=False, help="Erzwingt frische Daten von Meta API")
         if st.button("🔄 Aktualisieren", use_container_width=True):
             st.rerun()
 
     st.markdown("---")
 
     # Fetch data with ALL 67 fields
-    with st.spinner("🔥 Lade vollständige Daten..."):
+    with st.spinner("🔥 Lade vollständige Daten..." if not force_refresh else "⚡ Lade frische Daten von Meta API..."):
         try:
             # Fetch ad-level performance data (has all 67 fields)
-            df = meta_client.fetch_ad_performance(days=days)
+            df = meta_client.fetch_ad_performance(days=days, force_refresh=force_refresh)
 
             if df.empty:
                 st.warning("Keine Daten für den gewählten Zeitraum verfügbar.")
