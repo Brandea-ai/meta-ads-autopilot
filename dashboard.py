@@ -144,6 +144,32 @@ def render_home():
         campaign_df = st.session_state.meta_client.fetch_campaign_data(days=30)
         ad_df = st.session_state.meta_client.fetch_ad_performance(days=30)
 
+    # CHECK IF MOCK DATA!
+    mock_campaign_names = ['Herbst Aktion 2024', 'SUV Special', 'Limousinen Deal', 'Jahreswagen Angebot']
+    mock_ad_names = ['SUV Video Hook Test A', 'Limousine Static Hero', 'Jahreswagen Carousel']
+
+    is_using_mock_data = False
+    if not campaign_df.empty:
+        is_using_mock_data = any(name in campaign_df['campaign_name'].values for name in mock_campaign_names)
+    elif not ad_df.empty:
+        is_using_mock_data = any(name in ad_df['ad_name'].values for name in mock_ad_names)
+
+    # Show warning if mock data
+    if is_using_mock_data or (campaign_df.empty and ad_df.empty):
+        st.error("""
+        ⚠️ **WARNUNG: MOCK-DATEN WERDEN ANGEZEIGT!**
+
+        Die Meta Ads API gibt keine Daten zurück. Mögliche Gründe:
+        - 🔑 Access Token ist abgelaufen
+        - 🔒 Fehlende Berechtigungen (ads_read, business_management)
+        - 📊 Keine aktiven Campaigns/Ads im Account
+        - ⚙️ Streamlit Cloud Secrets nicht richtig gesetzt
+
+        **Lösung:** Gehe zu [Meta Business Settings](https://business.facebook.com/settings/) und generiere einen neuen Token.
+        """)
+    else:
+        st.success("✅ **ECHTE DATEN von Meta Ads API** werden angezeigt!")
+
     # Calculate metrics
     total_spend = campaign_df['spend'].sum() if not campaign_df.empty else 0
     total_leads = campaign_df['leads'].sum() if not campaign_df.empty else 0
@@ -1576,15 +1602,15 @@ def render_advanced_insights():
             else:
                 base_df['leads_extracted'] = 0
 
-            # Show summary
-            total_spend = base_df['spend'].sum()
-            total_impressions = base_df['impressions'].sum()
-            total_clicks = base_df['clicks'].sum()
-            total_leads = base_df['leads_extracted'].sum()
+            # Show summary - SAFE conversion
+            total_spend = float(base_df['spend'].sum()) if 'spend' in base_df.columns else 0.0
+            total_impressions = int(base_df['impressions'].sum()) if 'impressions' in base_df.columns else 0
+            total_clicks = int(base_df['clicks'].sum()) if 'clicks' in base_df.columns else 0
+            total_leads = int(base_df['leads_extracted'].sum()) if 'leads_extracted' in base_df.columns else 0
 
             col1, col2, col3, col4 = st.columns(4)
             with col1:
-                st.metric("Total Spend", f"€{total_spend:,.2f}")
+                st.metric("Total Spend", f"€{total_spend:,.2f}" if total_spend > 0 else "€0.00")
             with col2:
                 st.metric("Impressions", f"{total_impressions:,}")
             with col3:
