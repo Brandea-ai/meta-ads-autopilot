@@ -146,6 +146,15 @@ def render_home_professional(meta_client):
             for key, value in list(first_row.items())[:15]:
                 st.write(f"- **{key}**: {type(value).__name__} = {str(value)[:100]}")
 
+    # Convert ALL numeric string fields to actual numbers
+    # Meta API returns numbers as strings, we need to convert them
+    numeric_fields = ['spend', 'impressions', 'reach', 'frequency', 'clicks', 'ctr', 'unique_ctr',
+                     'cpc', 'cpm', 'cpp', 'inline_link_clicks', 'unique_clicks', 'inline_post_engagement']
+
+    for field in numeric_fields:
+        if field in df.columns:
+            df[field] = pd.to_numeric(df[field], errors='coerce').fillna(0)
+
     # Extract actions (leads)
     df['leads'] = df['actions'].apply(lambda x: extract_action_value(x, 'lead'))
     df['link_clicks_action'] = df['actions'].apply(lambda x: extract_action_value(x, 'link_click'))
