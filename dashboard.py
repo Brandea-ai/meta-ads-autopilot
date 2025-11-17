@@ -767,17 +767,44 @@ def render_leads_dashboard():
 
     st.markdown("---")
 
-    # Fetch leads data
+    # Fetch ad performance data to get lead counts per ad
     with st.spinner("Lade Lead-Daten..."):
-        leads_df = st.session_state.meta_client.fetch_leads_data(days=days, force_refresh=force_refresh)
+        ad_df = st.session_state.meta_client.fetch_ad_performance(days=days, force_refresh=force_refresh)
+
+    if ad_df.empty:
+        st.info("Keine Daten im gewählten Zeitraum gefunden")
+        return
+
+    # Convert Meta API strings to numbers
+    ad_df = convert_meta_strings_to_numbers(ad_df)
+
+    # Extract leads from actions
+    def extract_leads(actions):
+        if isinstance(actions, list):
+            for action in actions:
+                if isinstance(action, dict) and action.get('action_type') == 'lead':
+                    try:
+                        return int(action.get('value', 0))
+                    except:
+                        return 0
+        return 0
+
+    ad_df['leads'] = ad_df['actions'].apply(extract_leads)
+    ad_df['cpl'] = ad_df.apply(
+        lambda row: round(row['spend'] / row['leads'], 2) if row['leads'] > 0 else 0,
+        axis=1
+    )
+
+    # Filter only ads with leads
+    leads_df = ad_df[ad_df['leads'] > 0].copy()
 
     if leads_df.empty:
         st.info("Keine Leads im gewählten Zeitraum gefunden")
         st.info("""
-        **Mögliche Gründe:**
-        - Keine Lead-Formulare mit Submissions in diesem Zeitraum
-        - API-Berechtigungen prüfen (leads_retrieval erforderlich)
-        - Meta Ads Konto hat noch keine Leads generiert
+        **Hinweis:** Lead-Formulardaten (Namen, E-Mails, etc.) können nur mit
+        erweiterten API-Berechtigungen (leads_retrieval) abgerufen werden.
+
+        Diese Ansicht zeigt Lead-Counts pro Ad aus den Performance-Daten.
         """)
         return
 
@@ -785,59 +812,42 @@ def render_leads_dashboard():
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        st.metric("Total Leads", len(leads_df))
+        total_leads = int(leads_df['leads'].sum())
+        st.metric("Total Leads", total_leads)
 
     with col2:
-        # Count leads from last 24h
-        if 'created_time' in leads_df.columns:
-            leads_df['created_datetime'] = pd.to_datetime(leads_df['created_time'])
-            recent_leads = len(leads_df[leads_df['created_datetime'] >= datetime.now() - timedelta(days=1)])
-            st.metric("Leads (24h)", recent_leads)
-        else:
-            st.metric("Leads (24h)", "N/A")
+        total_spend = leads_df['spend'].sum()
+        st.metric("Total Spend", f"€{total_spend:,.2f}")
 
     with col3:
-        # Unique ad sources
-        if 'ad_name' in leads_df.columns:
-            unique_ads = leads_df['ad_name'].nunique()
-            st.metric("Unique Ads", unique_ads)
-        else:
-            st.metric("Unique Ads", "N/A")
+        avg_cpl = leads_df['cpl'].mean() if total_leads > 0 else 0
+        st.metric("Avg. CPL", f"€{avg_cpl:.2f}")
 
     with col4:
-        # Conversion rate (if we have impressions data)
-        st.metric("Conversion Rate", "N/A")
+        unique_ads = len(leads_df)
+        st.metric("Ads mit Leads", unique_ads)
 
     st.markdown("---")
 
-    # Display leads table
-    st.markdown(f"### Lead-Übersicht ({len(leads_df)} Leads)")
+    # Display leads table per ad
+    st.markdown(f"### Leads pro Ad ({total_leads} Total Leads)")
 
     # Prepare display dataframe
-    display_columns = []
-    available_columns = leads_df.columns.tolist()
+    display_df = leads_df[['ad_name', 'spend', 'leads', 'cpl', 'impressions', 'clicks']].copy()
+    display_df = display_df.sort_values('leads', ascending=False)
 
-    # Prioritize important columns
-    priority_columns = ['created_time', 'ad_name', 'full_name', 'email', 'phone_number', 'lead_id']
-
-    for col in priority_columns:
-        if col in available_columns:
-            display_columns.append(col)
-
-    # Add remaining columns
-    for col in available_columns:
-        if col not in display_columns and col not in ['form_id', 'created_datetime']:
-            display_columns.append(col)
+    # Format for display
+    display_df['spend'] = display_df['spend'].apply(lambda x: f"€{x:,.2f}")
+    display_df['cpl'] = display_df['cpl'].apply(lambda x: f"€{x:.2f}")
+    display_df['impressions'] = display_df['impressions'].apply(lambda x: f"{int(x):,}")
+    display_df['clicks'] = display_df['clicks'].apply(lambda x: f"{int(x):,}")
 
     # Display the table
-    if display_columns:
-        st.dataframe(
-            leads_df[display_columns],
-            use_container_width=True,
-            hide_index=True
-        )
-    else:
-        st.dataframe(leads_df, use_container_width=True, hide_index=True)
+    st.dataframe(
+        display_df,
+        use_container_width=True,
+        hide_index=True
+    )
 
     st.markdown("---")
 
