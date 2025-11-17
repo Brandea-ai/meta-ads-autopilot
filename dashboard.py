@@ -17,6 +17,7 @@ from src.ai_analyzer import AIAnalyzer
 from src.pdf_generator import PDFGenerator
 from src.data_processor import DataProcessor
 from src.visualizations import Visualizations
+from src.whatsapp_sender import WhatsAppSender
 
 # Page config
 st.set_page_config(
@@ -81,6 +82,12 @@ def init_session_state():
     if 'pdf_generator' not in st.session_state:
         st.session_state.pdf_generator = PDFGenerator()
 
+    if 'whatsapp_sender' not in st.session_state:
+        st.session_state.whatsapp_sender = WhatsAppSender()
+
+    if 'last_refresh' not in st.session_state:
+        st.session_state.last_refresh = None
+
 
 def render_sidebar():
     """Render sidebar navigation"""
@@ -90,7 +97,7 @@ def render_sidebar():
     page = st.sidebar.radio(
         "Navigation",
         ["🏠 Home", "📊 Weekly Report", "📈 Monthly Report",
-         "🎯 Ad Performance", "💡 Content Strategy", "⚙️ Settings"]
+         "🎯 Ad Performance", "📞 Leads Dashboard", "💡 Content Strategy", "⚙️ Settings"]
     )
 
     st.sidebar.markdown("---")
@@ -103,10 +110,31 @@ def render_sidebar():
     return page
 
 
+def render_refresh_button():
+    """Render refresh button and timestamp"""
+    col1, col2 = st.columns([3, 1])
+
+    with col2:
+        if st.button("🔄 Aktualisieren", type="secondary", use_container_width=True):
+            # Clear cache and refresh
+            st.session_state.meta_client.clear_cache()
+            st.session_state.last_refresh = datetime.now()
+            st.rerun()
+
+    with col1:
+        if st.session_state.last_refresh:
+            st.caption(f"Letztes Update: {st.session_state.last_refresh.strftime('%H:%M:%S')}")
+        else:
+            st.caption("Klicke auf 'Aktualisieren' für Live-Daten")
+
+
 def render_home():
     """Render home page"""
     st.markdown('<div class="main-header">Meta Ads Autopilot 🚀</div>', unsafe_allow_html=True)
     st.markdown("### AI-powered Performance Dashboard mit Google Gemini")
+
+    # Refresh button
+    render_refresh_button()
 
     st.markdown("---")
 
@@ -202,6 +230,9 @@ def render_home():
 def render_weekly_report():
     """Render weekly report page"""
     st.markdown("## 📊 Weekly Performance Report")
+
+    # Refresh button
+    render_refresh_button()
 
     # Date range picker
     col1, col2 = st.columns([2, 1])
@@ -321,22 +352,49 @@ def render_weekly_report():
             st.markdown("### 💡 AI-generierte Empfehlungen")
             st.info("Die Empfehlungen sind im Executive Summary enthalten")
 
-        # PDF Download
+        # PDF Download & WhatsApp
         st.markdown("---")
-        if st.button("📄 Download PDF Report", type="secondary"):
-            with st.spinner("Generiere PDF..."):
-                pdf_path = st.session_state.pdf_generator.generate_weekly_report(
-                    analysis, campaign_df, ad_df
-                )
+        col1, col2, col3 = st.columns([2, 1, 1])
 
-                with open(pdf_path, 'rb') as f:
-                    st.download_button(
-                        "📥 Download PDF",
-                        f.read(),
-                        file_name=os.path.basename(pdf_path),
-                        mime="application/pdf"
+        with col1:
+            st.markdown("### 📥 Export & Versand")
+
+        with col2:
+            if st.button("📄 Download PDF", type="secondary", use_container_width=True):
+                with st.spinner("Generiere PDF..."):
+                    pdf_path = st.session_state.pdf_generator.generate_weekly_report(
+                        analysis, campaign_df, ad_df
                     )
-                st.success(f"✅ PDF erstellt: {os.path.basename(pdf_path)}")
+
+                    with open(pdf_path, 'rb') as f:
+                        st.download_button(
+                            "📥 PDF herunterladen",
+                            f.read(),
+                            file_name=os.path.basename(pdf_path),
+                            mime="application/pdf",
+                            use_container_width=True
+                        )
+                    st.success(f"✅ PDF erstellt!")
+
+        with col3:
+            # WhatsApp send button
+            if st.session_state.whatsapp_sender.enabled:
+                to_number = Config.get('WHATSAPP_TO_NUMBER')
+                if to_number and st.button("📱 An WhatsApp", type="primary", use_container_width=True):
+                    # Calculate summary metrics
+                    total_spend = ad_df['spend'].sum() if not ad_df.empty else 0
+                    total_leads = ad_df['leads'].sum() if not ad_df.empty else 0
+                    avg_cpl = total_spend / total_leads if total_leads > 0 else 0
+
+                    with st.spinner("Sende an WhatsApp..."):
+                        if st.session_state.whatsapp_sender.send_quick_update(
+                            to_number, total_spend, int(total_leads), avg_cpl
+                        ):
+                            st.success("✅ WhatsApp gesendet!")
+                        else:
+                            st.error("❌ Versand fehlgeschlagen")
+            else:
+                st.caption("WhatsApp: Twilio nicht konfiguriert")
 
 
 def render_monthly_report():
@@ -392,6 +450,9 @@ def render_monthly_report():
 def render_ad_performance():
     """Render ad performance page"""
     st.markdown("## 🎯 Ad Performance Analysis")
+
+    # Refresh button
+    render_refresh_button()
 
     days = st.selectbox("Zeitraum", [7, 14, 30], index=2)
 
@@ -531,6 +592,185 @@ def render_content_strategy():
             )
 
 
+def render_leads_dashboard():
+    """Render leads dashboard page"""
+    st.markdown("## 📞 Leads Dashboard")
+    st.markdown("### Aktuelle Lead-Formulare Daten")
+
+    # Refresh button
+    render_refresh_button()
+
+    # Date range selector
+    col1, col2 = st.columns([2, 2])
+
+    with col1:
+        days = st.selectbox(
+            "Zeitraum wählen",
+            [7, 14, 30, 60],
+            index=2,
+            format_func=lambda x: f"Letzte {x} Tage"
+        )
+
+    with col2:
+        force_refresh = st.checkbox("Live-Daten (Cache umgehen)", value=False)
+
+    st.markdown("---")
+
+    # Fetch leads data
+    with st.spinner("Lade Lead-Daten..."):
+        leads_df = st.session_state.meta_client.fetch_leads_data(days=days, force_refresh=force_refresh)
+
+    if leads_df.empty:
+        st.warning("⚠️ Keine Leads im gewählten Zeitraum gefunden")
+        st.info("""
+        **Mögliche Gründe:**
+        - Keine Lead-Formulare mit Submissions in diesem Zeitraum
+        - API-Berechtigungen prüfen (leads_retrieval erforderlich)
+        - Meta Ads Konto hat noch keine Leads generiert
+        """)
+        return
+
+    # Display metrics
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric("Total Leads", len(leads_df))
+
+    with col2:
+        # Count leads from last 24h
+        if 'created_time' in leads_df.columns:
+            leads_df['created_datetime'] = pd.to_datetime(leads_df['created_time'])
+            recent_leads = len(leads_df[leads_df['created_datetime'] >= datetime.now() - timedelta(days=1)])
+            st.metric("Leads (24h)", recent_leads)
+        else:
+            st.metric("Leads (24h)", "N/A")
+
+    with col3:
+        # Unique ad sources
+        if 'ad_name' in leads_df.columns:
+            unique_ads = leads_df['ad_name'].nunique()
+            st.metric("Unique Ads", unique_ads)
+        else:
+            st.metric("Unique Ads", "N/A")
+
+    with col4:
+        # Conversion rate (if we have impressions data)
+        st.metric("Conversion Rate", "N/A")
+
+    st.markdown("---")
+
+    # Display leads table
+    st.markdown(f"### Lead-Übersicht ({len(leads_df)} Leads)")
+
+    # Prepare display dataframe
+    display_columns = []
+    available_columns = leads_df.columns.tolist()
+
+    # Prioritize important columns
+    priority_columns = ['created_time', 'ad_name', 'full_name', 'email', 'phone_number', 'lead_id']
+
+    for col in priority_columns:
+        if col in available_columns:
+            display_columns.append(col)
+
+    # Add remaining columns
+    for col in available_columns:
+        if col not in display_columns and col not in ['form_id', 'created_datetime']:
+            display_columns.append(col)
+
+    # Display the table
+    if display_columns:
+        st.dataframe(
+            leads_df[display_columns],
+            use_container_width=True,
+            hide_index=True
+        )
+    else:
+        st.dataframe(leads_df, use_container_width=True, hide_index=True)
+
+    st.markdown("---")
+
+    # Export functionality
+    col1, col2, col3 = st.columns([2, 1, 1])
+
+    with col1:
+        st.markdown("### 📥 Export")
+
+    with col2:
+        # CSV Export
+        csv = leads_df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            "📄 Download CSV",
+            csv,
+            file_name=f"leads_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+
+    with col3:
+        # WhatsApp notification (if configured)
+        if st.session_state.whatsapp_sender.enabled:
+            to_number = Config.get('WHATSAPP_TO_NUMBER')
+            if to_number and st.button("📱 WhatsApp Update", use_container_width=True):
+                message = f"""
+📞 *Lead Update - {Config.get('COMPANY_NAME', 'CarCenter Landshut')}*
+
+📊 *Zeitraum:* Letzte {days} Tage
+📞 *Leads:* {len(leads_df)}
+🕐 *Stand:* {datetime.now().strftime('%d.%m.%Y %H:%M')}
+
+_Powered by Meta Ads Autopilot_
+_Brandea GbR_
+                """.strip()
+
+                with st.spinner("Sende WhatsApp..."):
+                    if st.session_state.whatsapp_sender.send_report(to_number, message):
+                        st.success("✅ WhatsApp gesendet!")
+                    else:
+                        st.error("❌ WhatsApp Versand fehlgeschlagen")
+        else:
+            st.caption("WhatsApp nicht konfiguriert")
+
+    # Lead details section
+    if not leads_df.empty:
+        st.markdown("---")
+        st.markdown("### 🔍 Lead Details")
+
+        # Select a lead to view details
+        lead_options = []
+        for idx, row in leads_df.iterrows():
+            lead_label = f"{row.get('created_time', 'Unknown')} - {row.get('ad_name', 'Unknown')}"
+            lead_options.append((lead_label, idx))
+
+        if lead_options:
+            selected_lead_label, selected_idx = lead_options[0], 0
+            selected_lead_label = st.selectbox(
+                "Lead auswählen",
+                [opt[0] for opt in lead_options]
+            )
+
+            # Find the index
+            for label, idx in lead_options:
+                if label == selected_lead_label:
+                    selected_idx = idx
+                    break
+
+            # Display selected lead details
+            lead_data = leads_df.iloc[selected_idx]
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.markdown("**Lead Information:**")
+                for key, value in lead_data.items():
+                    if key not in ['form_id', 'created_datetime']:
+                        st.text(f"{key}: {value}")
+
+            with col2:
+                st.markdown("**Aktionen:**")
+                st.info("Lead-Qualifizierung und Follow-up Tracking kommt bald!")
+
+
 def render_settings():
     """Render settings page"""
     st.markdown("## ⚙️ Settings")
@@ -620,6 +860,8 @@ def main():
         render_monthly_report()
     elif page == "🎯 Ad Performance":
         render_ad_performance()
+    elif page == "📞 Leads Dashboard":
+        render_leads_dashboard()
     elif page == "💡 Content Strategy":
         render_content_strategy()
     elif page == "⚙️ Settings":
