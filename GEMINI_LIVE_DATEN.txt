@@ -1,0 +1,254 @@
+🔴 GEMINI HAT JETZT ZUGRIFF AUF ALLE LIVE-DATEN!
+
+=================================================================
+✅ PROBLEM GELÖST!
+=================================================================
+
+VORHER:
+❌ Gemini: "Ich habe keinen Zugriff auf Ihre Daten"
+❌ Nur generische Antworten
+❌ Keine konkreten Handlungsempfehlungen
+
+JETZT:
+✅ Gemini sieht ALLE aktuellen Kampagnen
+✅ Gemini kennt DEINE echten Zahlen
+✅ Konkrete Antworten mit echten Ad-Namen
+✅ Performance-Vergleiche möglich
+
+=================================================================
+🚀 WIE ES FUNKTIONIERT:
+=================================================================
+
+1. AI Chat Assistant öffnen (Sidebar → 💬 AI Chat Assistant)
+
+2. Live-Daten Status (oben):
+   [✓] 🔄 Live-Daten laden    [Zeitraum: 7 Tage ▼]    [✅ Daten aktiv]
+
+3. Gemini lädt automatisch:
+   - Alle Kampagnen (letzte 7 Tage)
+   - Top Performing Ads (beste 5)
+   - Lead-Daten (Anzahl + Quellen)
+   - Performance-Zusammenfassung
+
+4. Optional: Daten anzeigen
+   Klick auf "👁️ Geladene Daten anzeigen"
+   → Siehst GENAU was Gemini sieht!
+
+5. Frage stellen
+   → Gemini antwortet mit DEINEN echten Daten!
+
+=================================================================
+📊 WAS GEMINI SIEHT:
+=================================================================
+
+KAMPAGNEN:
+- Herbst Aktion 2024: Spend €450.00, Leads 25, CPL €18.00
+- SUV Special: Spend €380.00, Leads 18, CPL €21.11
+- Limousinen Deal: Spend €290.00, Leads 15, CPL €19.33
+
+TOP ADS (beste 5 nach CPL):
+- SUV Video Hook Test A: CPL €12.50, Hook Rate 28.5%, Leads 15
+- Limousine Static Hero: CPL €15.20, Hook Rate 22.3%, Leads 12
+- Jahreswagen Carousel: CPL €17.80, Hook Rate 19.8%, Leads 10
+
+LEADS:
+- Gesamt: 45 Leads
+- Top Lead-Quellen:
+  * SUV Video Hook Test A: 15 Leads
+  * Limousine Static Hero: 12 Leads
+  * Jahreswagen Carousel: 10 Leads
+
+ZUSAMMENFASSUNG:
+- Total Spend: €1,250.00
+- Total Leads: 45
+- Durchschnitt CPL: €27.78
+- Durchschnitt Hook Rate: 23.5%
+- Anzahl aktive Ads: 8
+
+=================================================================
+🎯 INTELLIGENTE QUICK-ACTIONS:
+=================================================================
+
+Vorher:
+❌ Generische Fragen ohne Kontext
+
+Jetzt:
+✅ Quick-Actions nutzen DEINE echten Daten!
+
+BEISPIELE:
+
+1. 📊 CPL analysieren
+   OHNE Daten: "Wie kann ich CPL senken?"
+   MIT Daten:  "Analysiere meine aktuellen CPL-Werte.
+                Ich habe 8 Ads mit durchschnittlich €27.78 CPL.
+                Welche Ads sollte ich optimieren und wie?"
+
+2. 🎯 Top Performer
+   OHNE Daten: "Was macht Top-Performer aus?"
+   MIT Daten:  "Warum performt 'SUV Video Hook Test A' so gut?
+                (CPL: €12.50, Hook Rate: 28.5%)
+                Was kann ich davon lernen?"
+
+3. ⚠️ Probleme finden
+   OHNE Daten: "Wie erkenne ich problematische Ads?"
+   MIT Daten:  "Ich habe 3 problematische Ads.
+                Analysiere die schlechtesten Performer
+                und sag mir KONKRET was ich ändern muss."
+
+4. 💡 Content-Ideen
+   OHNE Daten: "Gib mir Content-Ideen"
+   MIT Daten:  "Basierend auf meinen aktuellen Top-Performern:
+                Gib mir 5 neue, kreative Content-Ideen für
+                Auto-Ankauf Ads. Denk daran: Wir KAUFEN Autos!"
+
+=================================================================
+💬 BEISPIEL-CONVERSATION:
+=================================================================
+
+USER:
+"Warum ist mein CPL so hoch?"
+
+GEMINI SIEHT:
+1. System-Prompt (Auto-Ankauf Context)
+2. Live-Daten:
+   - Total Spend: €1,250
+   - Total Leads: 45
+   - Avg CPL: €27.78
+   - Alle Kampagnen mit Details
+3. Kann KONKRET antworten!
+
+GEMINI ANTWORTET (Beispiel):
+"Dein durchschnittlicher CPL von €27.78 ist höher als optimal.
+Ich sehe in deinen Daten:
+
+✅ GOOD:
+- 'SUV Video Hook Test A' hat €12.50 CPL - das ist exzellent!
+- Hook Rate 28.5% ist stark
+- 15 Leads generiert
+
+❌ PROBLEME:
+- 'Elektro Launch Campaign' hat €45.20 CPL - viel zu hoch!
+- Hook Rate nur 12.3%
+- Frequency 5.8 (Ad Fatigue!)
+
+🎯 KONKRETE EMPFEHLUNGEN:
+1. PAUSIERE: 'Elektro Launch Campaign' sofort
+2. SKALIERE: Budget von SUV Video um 50% erhöhen
+3. TESTE: Neue Hook für Elektro (erste 3 Sekunden)
+
+Erwarteter Impact: CPL runter auf €18-20"
+
+=================================================================
+🔄 ZEITRAUM ANPASSEN:
+=================================================================
+
+Standard: Letzte 7 Tage
+→ Dropdown oben: 7, 14, 30 Tage wählen
+
+Beispiel:
+- 7 Tage: Aktuelle Performance (kurzfristig)
+- 14 Tage: Trend erkennen (mittelfristig)
+- 30 Tage: Gesamtbild (langfristig)
+
+Gemini sieht immer den gewählten Zeitraum!
+
+=================================================================
+👁️ TRANSPARENZ:
+=================================================================
+
+Du siehst IMMER was Gemini sieht:
+
+1. Status-Box oben rechts:
+   ✅ Daten aktiv = Gemini hat Zugriff
+   ⚠️ Ohne Daten = Nur allgemeine Antworten
+
+2. Daten-Preview:
+   Expander öffnen → Genau das was Gemini bekommt
+
+3. Live-Daten an/aus:
+   Checkbox deaktivieren = Gemini arbeitet ohne Daten
+   (Nützlich für allgemeine Meta Ads Fragen)
+
+=================================================================
+🎓 USE CASES:
+=================================================================
+
+1. PERFORMANCE-ANALYSE:
+   "Analysiere meine Kampagnen der letzten 7 Tage.
+    Was läuft gut? Was muss ich ändern?"
+   → Gemini sieht alle Zahlen, gibt konkrete Tipps
+
+2. AD-OPTIMIERUNG:
+   "Warum performt [Ad-Name] schlecht?"
+   → Gemini sieht CPL, Hook Rate, Frequency
+   → Konkrete Verbesserungsvorschläge
+
+3. BUDGET-ENTSCHEIDUNGEN:
+   "Wo sollte ich mehr Budget investieren?"
+   → Gemini vergleicht alle Kampagnen
+   → ROI-basierte Empfehlungen
+
+4. CONTENT-STRATEGIE:
+   "Basierend auf meinen Top-Ads: Was funktioniert?"
+   → Gemini analysiert beste Performer
+   → Pattern-Erkennung für neue Ads
+
+5. PROBLEM-IDENTIFIKATION:
+   "Warum bekomme ich so wenig Leads?"
+   → Gemini sieht Total Leads
+   → Identifiziert Bottlenecks
+
+=================================================================
+⚙️ TECHNISCHE DETAILS:
+=================================================================
+
+WAS PASSIERT IM HINTERGRUND:
+
+1. Live-Daten laden = AN:
+   → fetch_campaign_data(days=7)
+   → fetch_ad_performance(days=7)
+   → fetch_leads_data(days=7)
+
+2. Daten werden formatiert:
+   → Kampagnen-Liste mit Metriken
+   → Top 5 Ads (sorted by CPL)
+   → Lead-Zusammenfassung
+   → Performance-Summary
+
+3. Context wird gebaut:
+   System-Prompt
+   + Live-Daten Block
+   + Chat-History
+   + User-Frage
+
+4. Gemini bekommt ALLES in einem Prompt:
+   → Sieht echte Zahlen
+   → Kann vergleichen
+   → Gibt konkrete Antworten
+
+PROMPT-STRUKTUR (vereinfacht):
+```
+Du bist Meta Ads Berater für CarCenter Landshut...
+[System-Prompt]
+
+============================================================
+🔴 LIVE-DATEN VON META ADS (AKTUELL!):
+============================================================
+
+📈 ZUSAMMENFASSUNG (letzte 7 Tage):
+- Total Spend: €1,250.00
+- Total Leads: 45
+...
+
+📊 AKTUELLE KAMPAGNEN:
+- Herbst Aktion 2024: Spend €450...
+...
+
+🎯 TOP ADS:
+- SUV Video Hook Test A: CPL €12.50...
+...
+
+⚠️ WICHTIG: Nutze diese AKTUELLEN Daten für deine Antwort!
+============================================================
+
+User: Warum ist mein CPL so hoch?
