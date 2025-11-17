@@ -18,6 +18,7 @@ from src.pdf_generator import PDFGenerator
 from src.data_processor import DataProcessor
 from src.visualizations import Visualizations
 from src.whatsapp_sender import WhatsAppSender
+from src.dashboard_home import render_home_professional
 
 # Page config
 st.set_page_config(
@@ -1721,7 +1722,7 @@ def main():
 
     # Render selected page
     if page == "🏠 Home":
-        render_home()
+        render_home_professional(st.session_state.meta_client)
     elif page == "📊 Weekly Report":
         render_weekly_report()
     elif page == "📈 Monthly Report":
