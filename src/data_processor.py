@@ -11,6 +11,30 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def extract_numeric_value(value, default=0):
+    """
+    Extract numeric value from various Meta API formats
+    Handles: lists like [{"value": "123"}], plain numbers, strings
+    """
+    if value is None:
+        return default
+
+    # If it's a list (Meta API format)
+    if isinstance(value, list):
+        if len(value) > 0 and isinstance(value[0], dict):
+            try:
+                return float(value[0].get('value', default))
+            except (ValueError, TypeError, KeyError):
+                return default
+        return default
+
+    # If it's already a number
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
+
 class DataProcessor:
     """Process and analyze Meta Ads data"""
 
@@ -27,31 +51,37 @@ class DataProcessor:
         """
         df = df.copy()
 
+        # Extract numeric values from Meta API format for all relevant columns
+        numeric_columns = ['spend', 'leads', 'video_plays_3s', 'impressions', 'thru_plays', 'clicks']
+        for col in numeric_columns:
+            if col in df.columns:
+                df[f'{col}_numeric'] = df[col].apply(extract_numeric_value)
+
         # Calculate CPL if not present
-        if 'cpl' not in df.columns and 'spend' in df.columns and 'leads' in df.columns:
+        if 'cpl' not in df.columns and 'spend_numeric' in df.columns and 'leads_numeric' in df.columns:
             df['cpl'] = df.apply(
-                lambda row: round(row['spend'] / row['leads'], 2) if row['leads'] > 0 else 0,
+                lambda row: round(row['spend_numeric'] / row['leads_numeric'], 2) if row['leads_numeric'] > 0 else 0,
                 axis=1
             )
 
         # Calculate Hook Rate if video data present
-        if 'hook_rate' not in df.columns and 'video_plays_3s' in df.columns and 'impressions' in df.columns:
+        if 'hook_rate' not in df.columns and 'video_plays_3s_numeric' in df.columns and 'impressions_numeric' in df.columns:
             df['hook_rate'] = df.apply(
-                lambda row: round((row['video_plays_3s'] / row['impressions'] * 100), 2) if row['impressions'] > 0 else 0,
+                lambda row: round((row['video_plays_3s_numeric'] / row['impressions_numeric'] * 100), 2) if row['impressions_numeric'] > 0 else 0,
                 axis=1
             )
 
         # Calculate Hold Rate if video data present
-        if 'hold_rate' not in df.columns and 'thru_plays' in df.columns and 'video_plays_3s' in df.columns:
+        if 'hold_rate' not in df.columns and 'thru_plays_numeric' in df.columns and 'video_plays_3s_numeric' in df.columns:
             df['hold_rate'] = df.apply(
-                lambda row: round((row['thru_plays'] / row['video_plays_3s'] * 100), 2) if row['video_plays_3s'] > 0 else 0,
+                lambda row: round((row['thru_plays_numeric'] / row['video_plays_3s_numeric'] * 100), 2) if row['video_plays_3s_numeric'] > 0 else 0,
                 axis=1
             )
 
         # Calculate CTR if clicks data present
-        if 'clicks' in df.columns and 'impressions' in df.columns and 'ctr' not in df.columns:
+        if 'clicks_numeric' in df.columns and 'impressions_numeric' in df.columns and 'ctr' not in df.columns:
             df['ctr'] = df.apply(
-                lambda row: round((row['clicks'] / row['impressions'] * 100), 2) if row['impressions'] > 0 else 0,
+                lambda row: round((row['clicks_numeric'] / row['impressions_numeric'] * 100), 2) if row['impressions_numeric'] > 0 else 0,
                 axis=1
             )
 
@@ -72,8 +102,11 @@ class DataProcessor:
         df = df.copy()
 
         if 'frequency' in df.columns:
-            df['ad_fatigue'] = df['frequency'] >= frequency_threshold
-            df['fatigue_severity'] = df['frequency'].apply(
+            # Extract numeric values from frequency column (handles Meta API list format)
+            df['frequency_numeric'] = df['frequency'].apply(extract_numeric_value)
+
+            df['ad_fatigue'] = df['frequency_numeric'] >= frequency_threshold
+            df['fatigue_severity'] = df['frequency_numeric'].apply(
                 lambda f: 'Critical' if f >= 8 else ('High' if f >= 6 else 'Normal')
             )
         else:
