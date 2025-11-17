@@ -358,8 +358,9 @@ class MetaAdsClient:
             return pd.DataFrame(cached_data)
 
         if not self.api_initialized:
-            logger.warning("Using mock data - API not initialized")
-            return self._get_mock_ad_data(days)
+            logger.error("❌ Meta Ads API not initialized")
+            logger.error("❌ Check if META_ACCESS_TOKEN and META_AD_ACCOUNT_ID are set correctly")
+            return pd.DataFrame()
 
         try:
             # Use time_range instead of date_preset to include TODAY!
@@ -368,154 +369,118 @@ class MetaAdsClient:
                 'until': end_date
             }
 
+            logger.info(f"📅 Fetching ad performance from {start_date} to {end_date}")
+
             ads = self.account.get_ads(fields=[
                 Ad.Field.name,
                 Ad.Field.status,
             ])
 
+            ads_list = list(ads)
+            logger.info(f"🎯 Found {len(ads_list)} ads in account")
+
             ad_data = []
-            for ad in ads:
-                # ALLE verfügbaren Ad-Insights Felder + Breakdowns!
+            for ad in ads_list:
+                logger.info(f"   📊 Fetching insights for ad: {ad.get('name', 'Unknown')}")
+                # NUR die 67 VERIFIZIERTEN Fields die WIRKLICH funktionieren!
+                # (getestet mit test_ALL_meta_fields.py)
                 insights = ad.get_insights(
                     params={
                         'time_range': time_range,
                         'level': 'ad',
-                        # WICHTIG: Keine Breakdowns hier, die holen wir separat!
                         'breakdowns': []
                     },
                     fields=[
-                        # Basic Info
-                        'ad_id',
-                        'ad_name',
-                        'adset_id',
-                        'adset_name',
-                        'campaign_id',
-                        'campaign_name',
-                        'objective',
+                        # IDs & Names & Dates (13 fields)
+                        'account_id', 'account_name', 'account_currency',
+                        'ad_id', 'ad_name',
+                        'adset_id', 'adset_name',
+                        'campaign_id', 'campaign_name',
+                        'date_start', 'date_stop',
+                        'created_time', 'updated_time',
 
-                        # Spend & Budget
-                        'spend',
-                        'account_currency',
+                        # Basic Metrics (5 fields)
+                        'spend', 'impressions', 'reach', 'frequency', 'clicks',
 
-                        # Delivery & Reach
-                        'impressions',
-                        'reach',
-                        'frequency',
-                        'social_spend',
-
-                        # Engagement - VOLLSTÄNDIG!
-                        'clicks',
+                        # CTR & Engagement (13 fields)
+                        'ctr', 'unique_ctr',
+                        'inline_link_clicks', 'inline_link_click_ctr',
+                        'unique_inline_link_clicks', 'unique_inline_link_click_ctr',
+                        'unique_link_clicks_ctr',
                         'unique_clicks',
-                        'inline_link_clicks',
-                        'inline_link_click_ctr',
-                        'unique_inline_link_clicks',
-                        'unique_inline_link_click_ctr',
-                        'ctr',
-                        'unique_ctr',
-                        'cpc',
-                        'cpm',
-                        'cpp',
+                        'inline_post_engagement',
+                        'website_ctr',
+                        'unique_actions',
+                        'actions',
+                        'result_rate',
+
+                        # Costs (13 fields)
+                        'cpc', 'cpm', 'cpp',
                         'cost_per_inline_link_click',
+                        'cost_per_inline_post_engagement',
                         'cost_per_unique_click',
                         'cost_per_unique_inline_link_click',
+                        'cost_per_action_type',
+                        'cost_per_unique_action_type',
+                        'cost_per_result',
+                        'cost_per_thruplay',
+                        'cost_per_15_sec_video_view',
+                        'link_clicks_per_results',
 
-                        # Video Metrics - ALLE!
+                        # Results & Performance (2 fields)
+                        'results',
+                        'result_values_performance_indicator',
+
+                        # Video Metrics (13 fields)
                         'video_play_actions',
+                        'video_play_curve_actions',
                         'video_avg_time_watched_actions',
+                        'video_15_sec_watched_actions',
+                        'video_30_sec_watched_actions',
                         'video_p25_watched_actions',
                         'video_p50_watched_actions',
                         'video_p75_watched_actions',
                         'video_p95_watched_actions',
                         'video_p100_watched_actions',
                         'video_thruplay_watched_actions',
-                        'video_continuous_2_sec_watched_actions',
-                        'video_30_sec_watched_actions',
-                        'video_15_sec_watched_actions',
-                        'video_play_curve_actions',
+                        'video_view_per_impression',
+                        'unique_video_view_15_sec',
 
-                        # Conversions - ALLE!
-                        'actions',
-                        'action_values',
-                        'cost_per_action_type',
-                        'cost_per_unique_action_type',
-                        'unique_actions',
-                        'conversions',
-                        'conversion_values',
-                        'cost_per_conversion',
-
-                        # Link Clicks
-                        'outbound_clicks',
-                        'unique_outbound_clicks',
-                        'outbound_clicks_ctr',
-                        'unique_outbound_clicks_ctr',
-                        'cost_per_outbound_click',
-                        'cost_per_unique_outbound_click',
-
-                        # Landing Page
-                        'website_ctr',
-                        'unique_link_clicks_ctr',
-
-                        # Quality Scores
-                        'quality_score_organic',
-                        'quality_score_ectr',
-                        'quality_score_ecvr',
+                        # Quality & Rankings (3 fields)
                         'quality_ranking',
                         'engagement_rate_ranking',
                         'conversion_rate_ranking',
 
-                        # Social
-                        'social_spend',
-                        'post_engagement',
-                        'post_reactions',
-                        'post_comments',
-                        'post_shares',
-                        'post_saves',
-                        'page_engagement',
-                        'page_likes',
-                        'video_views',
-
-                        # Canvas
-                        'canvas_avg_view_time',
-                        'canvas_avg_view_percent',
-
-                        # Instant Experience
-                        'instant_experience_clicks_to_open',
-                        'instant_experience_clicks_to_start',
-                        'instant_experience_outbound_clicks',
-
-                        # Mobile App
-                        'app_install_cost_per_app_install',
-                        'mobile_app_purchase_roas',
-
-                        # Ad Recall
-                        'estimated_ad_recallers',
-                        'estimated_ad_recall_rate',
-                        'cost_per_estimated_ad_recallers',
-
-                        # Attribution
+                        # Attribution & Config (5 fields)
                         'attribution_setting',
                         'buying_type',
-
-                        # ROAS
-                        'purchase_roas',
-                        'website_purchase_roas'
+                        'objective',
+                        'optimization_goal',
+                        'creative_media_type',
                     ]
                 )
 
                 for insight in insights:
-                    # Extract leads
+                    # Speichere ALLE Daten vom Insight!
+                    data = dict(insight)
+
+                    # Extract leads für einfachen Zugriff
                     leads = 0
                     if 'actions' in insight:
                         for action in insight['actions']:
                             if action['action_type'] == 'lead':
                                 leads = int(action['value'])
 
-                    # Extract video metrics
+                    data['leads_extracted'] = leads
+
+                    # Extract video metrics für einfachen Zugriff
                     video_plays_3s = 0
                     if 'video_play_actions' in insight:
                         for action in insight['video_play_actions']:
                             if action['action_type'] == 'video_view':
                                 video_plays_3s = int(action['value'])
+
+                    data['video_plays_3s'] = video_plays_3s
 
                     thru_plays = 0
                     if 'video_thruplay_watched_actions' in insight:
@@ -523,32 +488,35 @@ class MetaAdsClient:
                             if action['action_type'] == 'video_view':
                                 thru_plays = int(action['value'])
 
-                    # Calculate metrics
+                    data['thru_plays'] = thru_plays
+
+                    # Calculate convenience metrics
                     spend = float(insight.get('spend', 0))
                     impressions = int(insight.get('impressions', 1))
-                    cpl = spend / leads if leads > 0 else 0
-                    hook_rate = (video_plays_3s / impressions * 100) if impressions > 0 else 0
-                    hold_rate = (thru_plays / video_plays_3s * 100) if video_plays_3s > 0 else 0
 
-                    ad_data.append({
-                        'ad_name': insight.get('ad_name', 'Unknown'),
-                        'spend': spend,
-                        'impressions': impressions,
-                        'leads': leads,
-                        'cpl': round(cpl, 2),
-                        'video_plays_3s': video_plays_3s,
-                        'thru_plays': thru_plays,
-                        'hook_rate': round(hook_rate, 2),
-                        'hold_rate': round(hold_rate, 2),
-                        'frequency': float(insight.get('frequency', 0))
-                    })
+                    data['cpl'] = spend / leads if leads > 0 else 0
+                    data['hook_rate'] = (video_plays_3s / impressions * 100) if impressions > 0 else 0
+                    data['hold_rate'] = (thru_plays / video_plays_3s * 100) if video_plays_3s > 0 else 0
+
+                    ad_data.append(data)
+
+            logger.info(f"✅ Successfully fetched {len(ad_data)} data points from ads")
 
             df = pd.DataFrame(ad_data)
+
+            if not df.empty:
+                logger.info(f"✅ DataFrame created with {len(df)} rows and {len(df.columns)} columns")
+                logger.info(f"   Columns: {', '.join(df.columns[:10])}...")
+            else:
+                logger.warning("⚠️ DataFrame is EMPTY - no insights returned from API")
+
             self._save_to_cache(cache_key, df.to_dict('records'))
             return df
 
         except Exception as e:
             logger.error(f"❌ Error fetching ad data: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
             return pd.DataFrame()
 
 
