@@ -50,9 +50,9 @@ def safe_int(value, default=0):
         return default
 
 
-def render_kpi_card(label, value, delta=None, delta_color="normal"):
+def render_kpi_card(label, value, delta=None, delta_color="normal", help=None):
     """Render a professional KPI card"""
-    st.metric(label=label, value=value, delta=delta, delta_color=delta_color)
+    st.metric(label=label, value=value, delta=delta, delta_color=delta_color, help=help)
 
 
 def render_home_professional(meta_client):
