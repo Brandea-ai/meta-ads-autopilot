@@ -946,6 +946,28 @@ class MetaAdsClient:
             results['hourly'] = pd.DataFrame(hourly_data)
             logger.info(f"✅ Hourly breakdown: {len(hourly_data)} entries")
 
+            # CONVERT ALL STRINGS TO NUMBERS (Meta API returns everything as strings!)
+            logger.info("🔄 Converting Meta API strings to numbers...")
+            numeric_fields = [
+                'spend', 'impressions', 'reach', 'frequency', 'clicks',
+                'ctr', 'unique_ctr', 'inline_link_clicks', 'inline_link_click_ctr',
+                'unique_inline_link_clicks', 'unique_inline_link_click_ctr',
+                'unique_link_clicks_ctr', 'unique_clicks', 'inline_post_engagement',
+                'cpc', 'cpm', 'cpp', 'cost_per_inline_link_click',
+                'cost_per_inline_post_engagement', 'cost_per_unique_click',
+                'cost_per_unique_inline_link_click', 'cost_per_result',
+                'cost_per_thruplay', 'cost_per_15_sec_video_view',
+                'result_rate', 'link_clicks_per_results', 'video_view_per_impression',
+                'website_ctr'
+            ]
+
+            for dataset_name, df in results.items():
+                if not df.empty:
+                    for field in numeric_fields:
+                        if field in df.columns:
+                            df[field] = pd.to_numeric(df[field], errors='coerce').fillna(0)
+                    logger.info(f"✅ Converted {dataset_name}: {len(df)} rows")
+
             logger.info(f"🎉 COMPREHENSIVE INSIGHTS COMPLETE! Total datasets: {len(results)}")
 
             return results
