@@ -967,26 +967,49 @@ def render_ai_chat():
                 ad_df = st.session_state.meta_client.fetch_ad_performance(days=days_context)
                 leads_df = st.session_state.meta_client.fetch_leads_data(days=days_context)
 
+                # Convert strings to numbers
+                campaign_df = convert_meta_strings_to_numbers(campaign_df)
+                ad_df = convert_meta_strings_to_numbers(ad_df)
+
+                # Extract leads from ad_df actions
+                if not ad_df.empty:
+                    def extract_leads(actions):
+                        if isinstance(actions, list):
+                            for action in actions:
+                                if isinstance(action, dict) and action.get('action_type') == 'lead':
+                                    try:
+                                        return int(action.get('value', 0))
+                                    except:
+                                        return 0
+                        return 0
+
+                    ad_df['leads'] = ad_df['actions'].apply(extract_leads)
+                    ad_df['cpl'] = ad_df.apply(
+                        lambda row: round(row['spend'] / row['leads'], 2) if row['leads'] > 0 else 0,
+                        axis=1
+                    )
+
                 # Create context strings for Gemini
                 if not campaign_df.empty:
                     campaign_context = f"\n\n📊 AKTUELLE KAMPAGNEN (letzte {days_context} Tage):\n"
                     for idx, row in campaign_df.head(10).iterrows():
-                        campaign_context += f"- {row['campaign_name']}: Spend €{row['spend']:.2f}, Leads {row['leads']}, CPL €{row['cpl']:.2f}\n"
+                        campaign_context += f"- {row['campaign_name']}: Spend €{row.get('spend', 0):.2f}, Leads {row.get('leads', 0)}, CPL €{row.get('cpl', 0):.2f}\n"
 
                 if not ad_df.empty:
                     ad_context = f"\n\n🎯 TOP ADS (letzte {days_context} Tage):\n"
                     top_ads = ad_df.nsmallest(5, 'cpl') if 'cpl' in ad_df.columns else ad_df.head(5)
                     for idx, row in top_ads.iterrows():
-                        ad_context += f"- {row['ad_name']}: CPL €{row['cpl']:.2f}, Hook Rate {row.get('hook_rate', 0):.1f}%, Leads {row['leads']}\n"
+                        ad_context += f"- {row['ad_name']}: CPL €{row.get('cpl', 0):.2f}, Hook Rate {row.get('hook_rate', 0):.1f}%, Leads {row.get('leads', 0)}\n"
 
                 if not leads_df.empty:
                     leads_context = f"\n\n📞 LEADS (letzte {days_context} Tage):\n"
                     leads_context += f"- Gesamt: {len(leads_df)} Leads\n"
-                    if 'ad_name' in leads_df.columns:
-                        top_lead_sources = leads_df['ad_name'].value_counts().head(3)
+                    # Leads DataFrame now has form_name instead of ad_name
+                    if 'form_name' in leads_df.columns:
+                        top_lead_sources = leads_df['form_name'].value_counts().head(3)
                         leads_context += "- Top Lead-Quellen:\n"
-                        for ad_name, count in top_lead_sources.items():
-                            leads_context += f"  * {ad_name}: {count} Leads\n"
+                        for form_name, count in top_lead_sources.items():
+                            leads_context += f"  * {form_name}: {count} Leads\n"
 
                 # Summary metrics
                 if not ad_df.empty:
