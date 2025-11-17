@@ -843,12 +843,12 @@ class MetaAdsClient:
             results['placements'] = pd.DataFrame(placement_data)
             logger.info(f"✅ Placement breakdown: {len(placement_data)} entries")
 
-            # 8. DEVICES - Device Platform + Impression Device
+            # 8. DEVICES - Impression Device (besser als device_platform)
             logger.info("💻 Fetching device breakdown...")
             device_data = []
             for obj in objects:
                 insights = obj.get_insights(
-                    params={'time_range': time_range, 'breakdowns': ['device_platform', 'impression_device']},
+                    params={'time_range': time_range, 'breakdowns': ['impression_device']},
                     fields=standard_fields
                 )
                 for insight in insights:

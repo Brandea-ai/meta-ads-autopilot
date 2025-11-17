@@ -1519,10 +1519,8 @@ def render_advanced_insights():
             else:
                 device_df['leads_extracted'] = 0
 
-            if 'device_platform' in device_df.columns and 'impression_device' in device_df.columns:
-                device_df['device'] = device_df['device_platform'].astype(str) + ' - ' + device_df['impression_device'].astype(str)
-
-                device_summary = device_df.groupby('device').agg({
+            if 'impression_device' in device_df.columns:
+                device_summary = device_df.groupby('impression_device').agg({
                     'spend': 'sum',
                     'impressions': 'sum',
                     'clicks': 'sum',
@@ -1540,7 +1538,7 @@ def render_advanced_insights():
                     hide_index=True
                 )
 
-                fig = px.pie(device_summary, values='spend', names='device', title='Spend by Device')
+                fig = px.pie(device_summary, values='spend', names='impression_device', title='Spend by Device')
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("Keine Device-Daten verfügbar für diesen Zeitraum")
