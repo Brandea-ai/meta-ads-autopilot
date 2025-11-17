@@ -219,18 +219,18 @@ class MetaAdsClient:
                     ]
                     )
 
-                    insight_count = len(list(insights))
-                    logger.info(f"   Found {insight_count} insights for this campaign")
-
-                    if insight_count == 0:
-                        logger.warning(f"   ⚠️ No insights data for campaign - might be paused or no spend")
-                        continue
-
                 except Exception as e:
                     logger.error(f"   ❌ Error getting insights for campaign: {str(e)}")
                     continue
 
-                for insight in insights:
+                insights_list = list(insights)
+                logger.info(f"   Found {len(insights_list)} insights for this campaign")
+
+                if len(insights_list) == 0:
+                    logger.warning(f"   ⚠️ No insights data for campaign - might be paused or no spend")
+                    continue
+
+                for insight in insights_list:
                     # Extract ALL actions
                     actions_dict = {}
                     if 'actions' in insight:
