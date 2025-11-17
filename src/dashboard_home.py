@@ -22,6 +22,34 @@ def extract_action_value(actions, action_type):
     return 0
 
 
+def safe_sum(df, column, default=0):
+    """Safely sum a column with error handling"""
+    try:
+        if column in df.columns:
+            return float(df[column].sum())
+        return float(default)
+    except (ValueError, TypeError, KeyError):
+        return float(default)
+
+
+def safe_mean(df, column, default=0):
+    """Safely calculate mean of a column with error handling"""
+    try:
+        if column in df.columns:
+            return float(df[column].mean())
+        return float(default)
+    except (ValueError, TypeError, KeyError):
+        return float(default)
+
+
+def safe_int(value, default=0):
+    """Safely convert to int with error handling"""
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return default
+
+
 def render_kpi_card(label, value, delta=None, delta_color="normal"):
     """Render a professional KPI card"""
     st.metric(label=label, value=value, delta=delta, delta_color=delta_color)
@@ -86,35 +114,35 @@ def render_home_professional(meta_client):
     kpi_col1, kpi_col2, kpi_col3, kpi_col4, kpi_col5 = st.columns(5)
 
     with kpi_col1:
-        total_spend = df['spend'].sum() if 'spend' in df.columns else 0
+        total_spend = safe_sum(df, 'spend', 0)
         render_kpi_card(
             "💰 Total Spend",
             f"€{total_spend:,.2f}"
         )
 
     with kpi_col2:
-        total_impressions = int(df['impressions'].sum()) if 'impressions' in df.columns else 0
+        total_impressions = safe_int(safe_sum(df, 'impressions', 0))
         render_kpi_card(
             "👁️ Impressions",
             f"{total_impressions:,}"
         )
 
     with kpi_col3:
-        total_reach = int(df['reach'].sum()) if 'reach' in df.columns else 0
+        total_reach = safe_int(safe_sum(df, 'reach', 0))
         render_kpi_card(
             "👥 Reach",
             f"{total_reach:,}"
         )
 
     with kpi_col4:
-        avg_frequency = df['frequency'].mean() if 'frequency' in df.columns else 0
+        avg_frequency = safe_mean(df, 'frequency', 0)
         render_kpi_card(
             "🔁 Frequency",
             f"{avg_frequency:.2f}"
         )
 
     with kpi_col5:
-        total_clicks = int(df['clicks'].sum()) if 'clicks' in df.columns else 0
+        total_clicks = safe_int(safe_sum(df, 'clicks', 0))
         render_kpi_card(
             "👆 Clicks",
             f"{total_clicks:,}"
@@ -124,35 +152,35 @@ def render_home_professional(meta_client):
     kpi_col6, kpi_col7, kpi_col8, kpi_col9, kpi_col10 = st.columns(5)
 
     with kpi_col6:
-        total_leads = int(df['leads'].sum()) if 'leads' in df.columns else 0
+        total_leads = safe_int(safe_sum(df, 'leads', 0))
         render_kpi_card(
             "📈 Leads",
             f"{total_leads:,}"
         )
 
     with kpi_col7:
-        avg_cpl = (total_spend / total_leads) if total_leads > 0 else 0
+        avg_cpl = (total_spend / total_leads) if total_leads > 0 else 0.0
         render_kpi_card(
             "💵 CPL",
             f"€{avg_cpl:.2f}"
         )
 
     with kpi_col8:
-        avg_ctr = df['ctr'].mean() if 'ctr' in df.columns else 0
+        avg_ctr = safe_mean(df, 'ctr', 0)
         render_kpi_card(
             "📊 CTR",
             f"{avg_ctr:.2f}%"
         )
 
     with kpi_col9:
-        avg_cpc = df['cpc'].mean() if 'cpc' in df.columns else 0
+        avg_cpc = safe_mean(df, 'cpc', 0)
         render_kpi_card(
             "💰 CPC",
             f"€{avg_cpc:.2f}"
         )
 
     with kpi_col10:
-        avg_cpm = df['cpm'].mean() if 'cpm' in df.columns else 0
+        avg_cpm = safe_mean(df, 'cpm', 0)
         render_kpi_card(
             "📉 CPM",
             f"€{avg_cpm:.2f}"
@@ -170,27 +198,33 @@ def render_home_professional(meta_client):
     with conv_col1:
         # Objective Results
         total_results = 0
-        if 'results' in df.columns:
-            for results_data in df['results']:
-                if isinstance(results_data, list) and len(results_data) > 0:
-                    total_results += float(results_data[0].get('value', 0))
+        try:
+            if 'results' in df.columns:
+                for results_data in df['results']:
+                    if isinstance(results_data, list) and len(results_data) > 0:
+                        total_results += float(results_data[0].get('value', 0))
+        except (ValueError, TypeError, KeyError):
+            total_results = 0
 
         render_kpi_card(
             "🎯 Results",
-            f"{int(total_results):,}",
+            f"{safe_int(total_results):,}",
             help="Direct Objective Results"
         )
 
     with conv_col2:
         # Result Rate (Conversion Rate)
         avg_result_rate = 0
-        if 'result_rate' in df.columns:
-            result_rates = []
-            for rate_data in df['result_rate']:
-                if isinstance(rate_data, list) and len(rate_data) > 0:
-                    result_rates.append(float(rate_data[0].get('value', 0)))
-            if result_rates:
-                avg_result_rate = sum(result_rates) / len(result_rates)
+        try:
+            if 'result_rate' in df.columns:
+                result_rates = []
+                for rate_data in df['result_rate']:
+                    if isinstance(rate_data, list) and len(rate_data) > 0:
+                        result_rates.append(float(rate_data[0].get('value', 0)))
+                if result_rates:
+                    avg_result_rate = sum(result_rates) / len(result_rates)
+        except (ValueError, TypeError, KeyError, ZeroDivisionError):
+            avg_result_rate = 0
 
         render_kpi_card(
             "📈 Result Rate",
@@ -201,13 +235,16 @@ def render_home_professional(meta_client):
     with conv_col3:
         # Cost per Result
         avg_cost_per_result = 0
-        if 'cost_per_result' in df.columns:
-            costs = []
-            for cost_data in df['cost_per_result']:
-                if isinstance(cost_data, list) and len(cost_data) > 0:
-                    costs.append(float(cost_data[0].get('value', 0)))
-            if costs:
-                avg_cost_per_result = sum(costs) / len(costs)
+        try:
+            if 'cost_per_result' in df.columns:
+                costs = []
+                for cost_data in df['cost_per_result']:
+                    if isinstance(cost_data, list) and len(cost_data) > 0:
+                        costs.append(float(cost_data[0].get('value', 0)))
+                if costs:
+                    avg_cost_per_result = sum(costs) / len(costs)
+        except (ValueError, TypeError, KeyError, ZeroDivisionError):
+            avg_cost_per_result = 0
 
         render_kpi_card(
             "💵 Cost/Result",
@@ -217,13 +254,16 @@ def render_home_professional(meta_client):
     with conv_col4:
         # Link Clicks per Result
         avg_link_clicks_per_result = 0
-        if 'link_clicks_per_results' in df.columns:
-            clicks_per_result = []
-            for data in df['link_clicks_per_results']:
-                if isinstance(data, list) and len(data) > 0:
-                    clicks_per_result.append(float(data[0].get('value', 0)))
-            if clicks_per_result:
-                avg_link_clicks_per_result = sum(clicks_per_result) / len(clicks_per_result)
+        try:
+            if 'link_clicks_per_results' in df.columns:
+                clicks_per_result = []
+                for data in df['link_clicks_per_results']:
+                    if isinstance(data, list) and len(data) > 0:
+                        clicks_per_result.append(float(data[0].get('value', 0)))
+                if clicks_per_result:
+                    avg_link_clicks_per_result = sum(clicks_per_result) / len(clicks_per_result)
+        except (ValueError, TypeError, KeyError, ZeroDivisionError):
+            avg_link_clicks_per_result = 0
 
         render_kpi_card(
             "🔗 Clicks/Result",
@@ -241,28 +281,28 @@ def render_home_professional(meta_client):
     eng_col1, eng_col2, eng_col3, eng_col4 = st.columns(4)
 
     with eng_col1:
-        total_inline_post_engagement = int(df['inline_post_engagement'].sum()) if 'inline_post_engagement' in df.columns else 0
+        total_inline_post_engagement = safe_int(safe_sum(df, 'inline_post_engagement', 0))
         render_kpi_card(
             "💬 Post Engagement",
             f"{total_inline_post_engagement:,}"
         )
 
     with eng_col2:
-        total_inline_link_clicks = int(df['inline_link_clicks'].sum()) if 'inline_link_clicks' in df.columns else 0
+        total_inline_link_clicks = safe_int(safe_sum(df, 'inline_link_clicks', 0))
         render_kpi_card(
             "🔗 Inline Link Clicks",
             f"{total_inline_link_clicks:,}"
         )
 
     with eng_col3:
-        avg_inline_link_click_ctr = df['inline_link_click_ctr'].mean() if 'inline_link_click_ctr' in df.columns else 0
+        avg_inline_link_click_ctr = safe_mean(df, 'inline_link_click_ctr', 0)
         render_kpi_card(
             "📊 Link Click CTR",
             f"{avg_inline_link_click_ctr:.2f}%"
         )
 
     with eng_col4:
-        total_unique_clicks = int(df['unique_clicks'].sum()) if 'unique_clicks' in df.columns else 0
+        total_unique_clicks = safe_int(safe_sum(df, 'unique_clicks', 0))
         render_kpi_card(
             "👆 Unique Clicks",
             f"{total_unique_clicks:,}"
