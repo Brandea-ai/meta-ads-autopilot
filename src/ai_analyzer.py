@@ -272,7 +272,13 @@ class AIAnalyzer:
             return "Keine Daten verfügbar"
 
         if columns:
-            df = df[columns]
+            # Only select columns that actually exist in the DataFrame
+            available_columns = [col for col in columns if col in df.columns]
+            if available_columns:
+                df = df[available_columns]
+            else:
+                # If none of the requested columns exist, use all columns
+                logger.warning(f"Requested columns {columns} not found in DataFrame. Using all available columns.")
 
         # Convert to markdown table
         summary = df.to_markdown(index=False)
