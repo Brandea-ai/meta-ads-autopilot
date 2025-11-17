@@ -133,42 +133,167 @@ class MetaAdsClient:
 
             campaign_data = []
             for campaign in campaigns:
+                # ALLE verfügbaren Insights-Felder abrufen!
                 insights = campaign.get_insights(
-                    params={'time_range': time_range},
+                    params={
+                        'time_range': time_range,
+                        'level': 'campaign',
+                        'breakdowns': []  # Keine Breakdowns für Campaign-Level
+                    },
                     fields=[
+                        # Basic Info
+                        'campaign_id',
                         'campaign_name',
+                        'objective',
+
+                        # Spend & Budget
                         'spend',
+                        'budget_remaining',
+                        'daily_budget',
+                        'lifetime_budget',
+
+                        # Delivery
                         'impressions',
                         'reach',
                         'frequency',
+                        'social_spend',
+
+                        # Engagement
+                        'clicks',
+                        'unique_clicks',
+                        'ctr',
+                        'unique_ctr',
+                        'cpc',
+                        'cpm',
+                        'cpp',
+
+                        # Video Metrics (vollständig!)
+                        'video_play_actions',
+                        'video_avg_time_watched_actions',
+                        'video_p25_watched_actions',
+                        'video_p50_watched_actions',
+                        'video_p75_watched_actions',
+                        'video_p95_watched_actions',
+                        'video_p100_watched_actions',
+                        'video_thruplay_watched_actions',
+                        'video_continuous_2_sec_watched_actions',
+                        'video_30_sec_watched_actions',
+
+                        # Conversions
                         'actions',
-                        'cost_per_action_type'
+                        'action_values',
+                        'cost_per_action_type',
+                        'cost_per_unique_action_type',
+                        'conversions',
+                        'conversion_values',
+
+                        # Quality & Relevance
+                        'quality_score_organic',
+                        'quality_score_ectr',
+                        'quality_score_ecvr',
+
+                        # Link Clicks
+                        'outbound_clicks',
+                        'unique_outbound_clicks',
+                        'outbound_clicks_ctr',
+                        'cost_per_outbound_click',
+
+                        # Landing Page
+                        'website_ctr',
+                        'purchase_roas',
+
+                        # Age & Gender (wenn verfügbar)
+                        'cost_per_estimated_ad_recallers',
+                        'estimated_ad_recall_rate',
+                        'estimated_ad_recallers'
                     ]
                 )
 
                 for insight in insights:
-                    # Extract leads from actions
-                    leads = 0
+                    # Extract ALL actions
+                    actions_dict = {}
                     if 'actions' in insight:
                         for action in insight['actions']:
-                            if action['action_type'] == 'lead':
-                                leads = int(action['value'])
+                            action_type = action.get('action_type', 'unknown')
+                            actions_dict[f'actions_{action_type}'] = int(action.get('value', 0))
 
-                    # Extract CPL
-                    cpl = 0
+                    # Extract ALL costs
+                    costs_dict = {}
                     if 'cost_per_action_type' in insight:
                         for cost in insight['cost_per_action_type']:
-                            if cost['action_type'] == 'lead':
-                                cpl = float(cost['value'])
+                            cost_type = cost.get('action_type', 'unknown')
+                            costs_dict[f'cost_per_{cost_type}'] = float(cost.get('value', 0))
 
+                    # Extract video metrics
+                    video_dict = {}
+                    for video_field in ['video_play_actions', 'video_p25_watched_actions', 'video_p50_watched_actions',
+                                       'video_p75_watched_actions', 'video_p95_watched_actions', 'video_p100_watched_actions',
+                                       'video_thruplay_watched_actions', 'video_continuous_2_sec_watched_actions',
+                                       'video_30_sec_watched_actions', 'video_avg_time_watched_actions']:
+                        if video_field in insight:
+                            for action in insight[video_field]:
+                                action_type = action.get('action_type', 'unknown')
+                                video_dict[f'{video_field}_{action_type}'] = float(action.get('value', 0))
+
+                    # Legacy fields for compatibility
+                    leads = actions_dict.get('actions_lead', 0)
+                    cpl = costs_dict.get('cost_per_lead', 0)
+
+                    # Build comprehensive data dict
                     campaign_data.append({
+                        # Basic Info
+                        'campaign_id': insight.get('campaign_id', ''),
                         'campaign_name': insight.get('campaign_name', 'Unknown'),
+                        'objective': insight.get('objective', ''),
+
+                        # Spend & Budget
                         'spend': float(insight.get('spend', 0)),
+                        'budget_remaining': float(insight.get('budget_remaining', 0)),
+                        'daily_budget': float(insight.get('daily_budget', 0)),
+                        'lifetime_budget': float(insight.get('lifetime_budget', 0)),
+
+                        # Delivery
                         'impressions': int(insight.get('impressions', 0)),
                         'reach': int(insight.get('reach', 0)),
                         'frequency': float(insight.get('frequency', 0)),
+                        'social_spend': float(insight.get('social_spend', 0)),
+
+                        # Engagement
+                        'clicks': int(insight.get('clicks', 0)),
+                        'unique_clicks': int(insight.get('unique_clicks', 0)),
+                        'ctr': float(insight.get('ctr', 0)),
+                        'unique_ctr': float(insight.get('unique_ctr', 0)),
+                        'cpc': float(insight.get('cpc', 0)),
+                        'cpm': float(insight.get('cpm', 0)),
+                        'cpp': float(insight.get('cpp', 0)),
+
+                        # Link Clicks
+                        'outbound_clicks': int(insight.get('outbound_clicks', 0)),
+                        'unique_outbound_clicks': int(insight.get('unique_outbound_clicks', 0)),
+                        'outbound_clicks_ctr': float(insight.get('outbound_clicks_ctr', 0)),
+                        'cost_per_outbound_click': float(insight.get('cost_per_outbound_click', 0)),
+
+                        # Quality
+                        'quality_score_organic': float(insight.get('quality_score_organic', 0)),
+                        'quality_score_ectr': float(insight.get('quality_score_ectr', 0)),
+                        'quality_score_ecvr': float(insight.get('quality_score_ecvr', 0)),
+
+                        # Website
+                        'website_ctr': float(insight.get('website_ctr', 0)),
+                        'purchase_roas': float(insight.get('purchase_roas', 0)),
+
+                        # Ad Recall
+                        'estimated_ad_recallers': int(insight.get('estimated_ad_recallers', 0)),
+                        'estimated_ad_recall_rate': float(insight.get('estimated_ad_recall_rate', 0)),
+
+                        # Legacy compatibility
                         'leads': leads,
-                        'cpl': cpl
+                        'cpl': cpl,
+
+                        # Add ALL extracted actions
+                        **actions_dict,
+                        **costs_dict,
+                        **video_dict
                     })
 
             df = pd.DataFrame(campaign_data)
@@ -222,17 +347,130 @@ class MetaAdsClient:
 
             ad_data = []
             for ad in ads:
+                # ALLE verfügbaren Ad-Insights Felder + Breakdowns!
                 insights = ad.get_insights(
-                    params={'time_range': time_range},
+                    params={
+                        'time_range': time_range,
+                        'level': 'ad',
+                        # WICHTIG: Keine Breakdowns hier, die holen wir separat!
+                        'breakdowns': []
+                    },
                     fields=[
+                        # Basic Info
+                        'ad_id',
                         'ad_name',
+                        'adset_id',
+                        'adset_name',
+                        'campaign_id',
+                        'campaign_name',
+                        'objective',
+
+                        # Spend & Budget
                         'spend',
+                        'account_currency',
+
+                        # Delivery & Reach
                         'impressions',
+                        'reach',
                         'frequency',
-                        'actions',
-                        'cost_per_action_type',
+                        'social_spend',
+
+                        # Engagement - VOLLSTÄNDIG!
+                        'clicks',
+                        'unique_clicks',
+                        'inline_link_clicks',
+                        'inline_link_click_ctr',
+                        'unique_inline_link_clicks',
+                        'unique_inline_link_click_ctr',
+                        'ctr',
+                        'unique_ctr',
+                        'cpc',
+                        'cpm',
+                        'cpp',
+                        'cost_per_inline_link_click',
+                        'cost_per_unique_click',
+                        'cost_per_unique_inline_link_click',
+
+                        # Video Metrics - ALLE!
                         'video_play_actions',
-                        'video_thruplay_watched_actions'
+                        'video_avg_time_watched_actions',
+                        'video_p25_watched_actions',
+                        'video_p50_watched_actions',
+                        'video_p75_watched_actions',
+                        'video_p95_watched_actions',
+                        'video_p100_watched_actions',
+                        'video_thruplay_watched_actions',
+                        'video_continuous_2_sec_watched_actions',
+                        'video_30_sec_watched_actions',
+                        'video_15_sec_watched_actions',
+                        'video_play_curve_actions',
+
+                        # Conversions - ALLE!
+                        'actions',
+                        'action_values',
+                        'cost_per_action_type',
+                        'cost_per_unique_action_type',
+                        'unique_actions',
+                        'conversions',
+                        'conversion_values',
+                        'cost_per_conversion',
+
+                        # Link Clicks
+                        'outbound_clicks',
+                        'unique_outbound_clicks',
+                        'outbound_clicks_ctr',
+                        'unique_outbound_clicks_ctr',
+                        'cost_per_outbound_click',
+                        'cost_per_unique_outbound_click',
+
+                        # Landing Page
+                        'website_ctr',
+                        'unique_link_clicks_ctr',
+
+                        # Quality Scores
+                        'quality_score_organic',
+                        'quality_score_ectr',
+                        'quality_score_ecvr',
+                        'quality_ranking',
+                        'engagement_rate_ranking',
+                        'conversion_rate_ranking',
+
+                        # Social
+                        'social_spend',
+                        'post_engagement',
+                        'post_reactions',
+                        'post_comments',
+                        'post_shares',
+                        'post_saves',
+                        'page_engagement',
+                        'page_likes',
+                        'video_views',
+
+                        # Canvas
+                        'canvas_avg_view_time',
+                        'canvas_avg_view_percent',
+
+                        # Instant Experience
+                        'instant_experience_clicks_to_open',
+                        'instant_experience_clicks_to_start',
+                        'instant_experience_outbound_clicks',
+
+                        # Mobile App
+                        'app_install_cost_per_app_install',
+                        'mobile_app_purchase_roas',
+
+                        # Ad Recall
+                        'estimated_ad_recallers',
+                        'estimated_ad_recall_rate',
+                        'cost_per_estimated_ad_recallers',
+
+                        # Attribution
+                        'attribution_setting',
+                        'buying_type',
+
+                        # ROAS
+                        'purchase_roas',
+                        'website_purchase_roas'
                     ]
                 )
 
@@ -474,3 +712,214 @@ class MetaAdsClient:
                         logger.info(f"Cleared cache: {file}")
                     except:
                         pass
+
+    def fetch_comprehensive_insights(
+        self,
+        days: int = 7,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        level: str = 'ad'
+    ) -> Dict[str, pd.DataFrame]:
+        """
+        🔥 ULTIMATE FUNCTION - ALLE verfügbaren Meta Ads Insights mit Breakdowns!
+
+        Diese Funktion holt ALLE Daten die Meta bietet:
+        ✅ Demographics (Alter, Geschlecht)
+        ✅ Geographic (Land, Region, Stadt)
+        ✅ Plattformen (Facebook, Instagram, Messenger, Audience Network)
+        ✅ Placements (Feed, Stories, Reels, etc.)
+        ✅ Geräte (Mobile, Desktop, Tablet)
+        ✅ Zeiten (Stunde des Tages)
+        ✅ Alle Action-Types (Leads, Engagement, Video-Views, etc.)
+        ✅ Vollständige Video-Retention-Metriken
+        ✅ Vollständige Engagement-Metriken
+
+        Args:
+            days: Number of days to look back
+            start_date: Start date in YYYY-MM-DD format (optional)
+            end_date: End date in YYYY-MM-DD format (optional, defaults to TODAY)
+            level: 'ad', 'adset', or 'campaign'
+
+        Returns:
+            Dictionary mit allen Breakdowns:
+            {
+                'base': DataFrame mit Basis-Metriken,
+                'demographics_age': DataFrame mit Age-Breakdown,
+                'demographics_gender': DataFrame mit Gender-Breakdown,
+                'demographics_age_gender': DataFrame mit Age+Gender kombiniert,
+                'geographic_country': DataFrame mit Country-Breakdown,
+                'geographic_region': DataFrame mit Region-Breakdown,
+                'placements': DataFrame mit Platform & Placement-Breakdown,
+                'devices': DataFrame mit Device-Breakdown,
+                'hourly': DataFrame mit Hourly-Stats
+            }
+        """
+        if not self.api_initialized:
+            logger.warning("API not initialized - cannot fetch comprehensive insights")
+            return {}
+
+        # Calculate date range
+        if not end_date:
+            end_date = datetime.now().strftime('%Y-%m-%d')
+        if not start_date:
+            start_date = (datetime.now() - timedelta(days=days-1)).strftime('%Y-%m-%d')
+
+        logger.info(f"🔥 Fetching COMPREHENSIVE insights from {start_date} to {end_date}")
+
+        time_range = {'since': start_date, 'until': end_date}
+
+        # Alle Standard-Felder die wir immer abrufen
+        standard_fields = [
+            'ad_id', 'ad_name', 'adset_id', 'adset_name', 'campaign_id', 'campaign_name',
+            'spend', 'impressions', 'reach', 'frequency', 'clicks', 'ctr', 'cpc', 'cpm',
+            'actions', 'cost_per_action_type',
+            'video_play_actions', 'video_p25_watched_actions', 'video_p50_watched_actions',
+            'video_p75_watched_actions', 'video_p95_watched_actions', 'video_p100_watched_actions',
+            'video_thruplay_watched_actions', 'video_30_sec_watched_actions',
+            'video_avg_time_watched_actions'
+        ]
+
+        results = {}
+
+        try:
+            # Hol Ads
+            if level == 'ad':
+                objects = self.account.get_ads(fields=[Ad.Field.name, Ad.Field.status])
+            elif level == 'adset':
+                objects = self.account.get_ad_sets(fields=['name', 'status'])
+            else:
+                objects = self.account.get_campaigns(fields=[Campaign.Field.name, Campaign.Field.status])
+
+            # 1. BASE INSIGHTS (keine Breakdowns)
+            logger.info("📊 Fetching base insights...")
+            base_data = []
+            for obj in objects:
+                insights = obj.get_insights(
+                    params={'time_range': time_range},
+                    fields=standard_fields
+                )
+                for insight in insights:
+                    base_data.append(dict(insight))
+
+            results['base'] = pd.DataFrame(base_data)
+            logger.info(f"✅ Base insights: {len(base_data)} entries")
+
+            # 2. DEMOGRAPHICS - AGE
+            logger.info("👥 Fetching age demographics...")
+            age_data = []
+            for obj in objects:
+                insights = obj.get_insights(
+                    params={'time_range': time_range, 'breakdowns': ['age']},
+                    fields=standard_fields
+                )
+                for insight in insights:
+                    age_data.append(dict(insight))
+
+            results['demographics_age'] = pd.DataFrame(age_data)
+            logger.info(f"✅ Age demographics: {len(age_data)} entries")
+
+            # 3. DEMOGRAPHICS - GENDER
+            logger.info("👥 Fetching gender demographics...")
+            gender_data = []
+            for obj in objects:
+                insights = obj.get_insights(
+                    params={'time_range': time_range, 'breakdowns': ['gender']},
+                    fields=standard_fields
+                )
+                for insight in insights:
+                    gender_data.append(dict(insight))
+
+            results['demographics_gender'] = pd.DataFrame(gender_data)
+            logger.info(f"✅ Gender demographics: {len(gender_data)} entries")
+
+            # 4. DEMOGRAPHICS - AGE + GENDER (kombiniert!)
+            logger.info("👥 Fetching age+gender demographics...")
+            age_gender_data = []
+            for obj in objects:
+                insights = obj.get_insights(
+                    params={'time_range': time_range, 'breakdowns': ['age', 'gender']},
+                    fields=standard_fields
+                )
+                for insight in insights:
+                    age_gender_data.append(dict(insight))
+
+            results['demographics_age_gender'] = pd.DataFrame(age_gender_data)
+            logger.info(f"✅ Age+Gender demographics: {len(age_gender_data)} entries")
+
+            # 5. GEOGRAPHIC - COUNTRY
+            logger.info("🌍 Fetching country breakdown...")
+            country_data = []
+            for obj in objects:
+                insights = obj.get_insights(
+                    params={'time_range': time_range, 'breakdowns': ['country']},
+                    fields=standard_fields
+                )
+                for insight in insights:
+                    country_data.append(dict(insight))
+
+            results['geographic_country'] = pd.DataFrame(country_data)
+            logger.info(f"✅ Country breakdown: {len(country_data)} entries")
+
+            # 6. GEOGRAPHIC - REGION
+            logger.info("🌍 Fetching region breakdown...")
+            region_data = []
+            for obj in objects:
+                insights = obj.get_insights(
+                    params={'time_range': time_range, 'breakdowns': ['region']},
+                    fields=standard_fields
+                )
+                for insight in insights:
+                    region_data.append(dict(insight))
+
+            results['geographic_region'] = pd.DataFrame(region_data)
+            logger.info(f"✅ Region breakdown: {len(region_data)} entries")
+
+            # 7. PLACEMENTS - Publisher Platform + Platform Position
+            logger.info("📱 Fetching placement breakdown...")
+            placement_data = []
+            for obj in objects:
+                insights = obj.get_insights(
+                    params={'time_range': time_range, 'breakdowns': ['publisher_platform', 'platform_position']},
+                    fields=standard_fields
+                )
+                for insight in insights:
+                    placement_data.append(dict(insight))
+
+            results['placements'] = pd.DataFrame(placement_data)
+            logger.info(f"✅ Placement breakdown: {len(placement_data)} entries")
+
+            # 8. DEVICES - Device Platform + Impression Device
+            logger.info("💻 Fetching device breakdown...")
+            device_data = []
+            for obj in objects:
+                insights = obj.get_insights(
+                    params={'time_range': time_range, 'breakdowns': ['device_platform', 'impression_device']},
+                    fields=standard_fields
+                )
+                for insight in insights:
+                    device_data.append(dict(insight))
+
+            results['devices'] = pd.DataFrame(device_data)
+            logger.info(f"✅ Device breakdown: {len(device_data)} entries")
+
+            # 9. HOURLY STATS
+            logger.info("🕐 Fetching hourly breakdown...")
+            hourly_data = []
+            for obj in objects:
+                insights = obj.get_insights(
+                    params={'time_range': time_range, 'breakdowns': ['hourly_stats_aggregated_by_advertiser_time_zone']},
+                    fields=standard_fields
+                )
+                for insight in insights:
+                    hourly_data.append(dict(insight))
+
+            results['hourly'] = pd.DataFrame(hourly_data)
+            logger.info(f"✅ Hourly breakdown: {len(hourly_data)} entries")
+
+            logger.info(f"🎉 COMPREHENSIVE INSIGHTS COMPLETE! Total datasets: {len(results)}")
+
+            return results
+
+        except Exception as e:
+            logger.error(f"❌ Error fetching comprehensive insights: {str(e)}")
+            return {}
