@@ -19,6 +19,7 @@ from src.data_processor import DataProcessor
 from src.visualizations import Visualizations
 from src.whatsapp_sender import WhatsAppSender
 from src.dashboard_home import render_home_professional
+from src.dashboard_advanced_insights import render_advanced_insights_professional
 
 # Page config
 st.set_page_config(
@@ -1736,7 +1737,7 @@ def main():
     elif page == "💬 AI Chat Assistant":
         render_ai_chat()
     elif page == "🔬 Advanced Insights":
-        render_advanced_insights()
+        render_advanced_insights_professional(st.session_state.meta_client)
     elif page == "⚙️ Settings":
         render_settings()
 
