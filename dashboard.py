@@ -32,6 +32,26 @@ def safe_select_columns(df, columns):
     return df[available_columns] if available_columns else df
 
 
+def convert_meta_strings_to_numbers(df):
+    """
+    Convert Meta API string numbers to actual floats
+    Meta API returns all numeric values as strings, this converts them
+    """
+    if df.empty:
+        return df
+
+    numeric_fields = ['spend', 'impressions', 'reach', 'frequency', 'clicks', 'ctr', 'unique_ctr',
+                     'cpc', 'cpm', 'cpp', 'inline_link_clicks', 'unique_clicks', 'inline_post_engagement',
+                     'cost_per_inline_link_click', 'cost_per_inline_post_engagement',
+                     'cost_per_unique_click', 'cost_per_unique_inline_link_click']
+
+    for field in numeric_fields:
+        if field in df.columns:
+            df[field] = pd.to_numeric(df[field], errors='coerce').fillna(0)
+
+    return df
+
+
 # Page config
 st.set_page_config(
     page_title="Meta Ads Autopilot",
@@ -569,14 +589,23 @@ def render_ad_performance():
     # Refresh button
     render_refresh_button()
 
-    days = st.selectbox("Zeitraum", [7, 14, 30], index=2)
+    col1, col2 = st.columns([3, 1])
 
-    with st.spinner("Lade Ad Performance Daten..."):
-        ad_df = st.session_state.meta_client.fetch_ad_performance(days=days)
+    with col1:
+        days = st.selectbox("Zeitraum", [7, 14, 30], index=2)
+
+    with col2:
+        force_refresh = st.checkbox("⚡ Cache ignorieren", value=False, help="Frische Daten laden")
+
+    with st.spinner("Lade Ad Performance Daten..." if not force_refresh else "⚡ Lade frische Daten von Meta API..."):
+        ad_df = st.session_state.meta_client.fetch_ad_performance(days=days, force_refresh=force_refresh)
 
     if ad_df.empty:
         st.warning("Keine Ad-Daten verfügbar")
         return
+
+    # Convert Meta API strings to numbers
+    ad_df = convert_meta_strings_to_numbers(ad_df)
 
     # Calculate metrics
     ad_df = st.session_state.data_processor.calculate_metrics(ad_df)
