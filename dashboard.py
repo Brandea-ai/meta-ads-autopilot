@@ -97,7 +97,8 @@ def render_sidebar():
     page = st.sidebar.radio(
         "Navigation",
         ["🏠 Home", "📊 Weekly Report", "📈 Monthly Report",
-         "🎯 Ad Performance", "📞 Leads Dashboard", "💡 Content Strategy", "⚙️ Settings"]
+         "🎯 Ad Performance", "📞 Leads Dashboard", "💡 Content Strategy",
+         "💬 AI Chat Assistant", "⚙️ Settings"]
     )
 
     st.sidebar.markdown("---")
@@ -234,25 +235,88 @@ def render_weekly_report():
     # Refresh button
     render_refresh_button()
 
-    # Date range picker
-    col1, col2 = st.columns([2, 1])
+    st.markdown("---")
+
+    # Date range picker - PROFESSIONAL wie bei Meta!
+    st.markdown("### 📅 Datumsbereich auswählen")
+
+    col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
 
     with col1:
-        days = st.selectbox(
-            "Zeitraum wählen",
-            [7, 14, 30],
-            format_func=lambda x: f"Letzte {x} Tage"
+        # Preset options
+        preset = st.selectbox(
+            "Schnellauswahl",
+            ["Benutzerdefiniert", "Heute", "Gestern", "Letzte 7 Tage", "Letzte 14 Tage", "Letzte 30 Tage", "Dieser Monat", "Letzter Monat"],
+            index=3
         )
 
+    # Calculate dates based on preset
+    today = datetime.now().date()
+
+    if preset == "Heute":
+        start_date_default = today
+        end_date_default = today
+    elif preset == "Gestern":
+        start_date_default = today - timedelta(days=1)
+        end_date_default = today - timedelta(days=1)
+    elif preset == "Letzte 7 Tage":
+        start_date_default = today - timedelta(days=6)
+        end_date_default = today
+    elif preset == "Letzte 14 Tage":
+        start_date_default = today - timedelta(days=13)
+        end_date_default = today
+    elif preset == "Letzte 30 Tage":
+        start_date_default = today - timedelta(days=29)
+        end_date_default = today
+    elif preset == "Dieser Monat":
+        start_date_default = today.replace(day=1)
+        end_date_default = today
+    elif preset == "Letzter Monat":
+        first_day_this_month = today.replace(day=1)
+        last_day_last_month = first_day_this_month - timedelta(days=1)
+        start_date_default = last_day_last_month.replace(day=1)
+        end_date_default = last_day_last_month
+    else:  # Benutzerdefiniert
+        start_date_default = today - timedelta(days=6)
+        end_date_default = today
+
     with col2:
-        analyze_button = st.button("🤖 Analyze & Generate Report", type="primary", use_container_width=True)
+        start_date = st.date_input(
+            "Von",
+            value=start_date_default,
+            max_value=today,
+            disabled=(preset != "Benutzerdefiniert")
+        )
+
+    with col3:
+        end_date = st.date_input(
+            "Bis",
+            value=end_date_default,
+            max_value=today,
+            min_value=start_date if preset == "Benutzerdefiniert" else None,
+            disabled=(preset != "Benutzerdefiniert")
+        )
+
+    with col4:
+        analyze_button = st.button("🤖 Analysieren", type="primary", use_container_width=True)
+
+    # Show selected range
+    days_selected = (end_date - start_date).days + 1
+    st.caption(f"📊 Ausgewählter Zeitraum: **{days_selected} Tage** ({start_date.strftime('%d.%m.%Y')} - {end_date.strftime('%d.%m.%Y')})")
 
     st.markdown("---")
 
     if analyze_button:
         with st.spinner("🔄 Lade Meta Ads Daten..."):
-            campaign_df = st.session_state.meta_client.fetch_campaign_data(days=days)
-            ad_df = st.session_state.meta_client.fetch_ad_performance(days=days)
+            # Use custom date range with start_date and end_date!
+            campaign_df = st.session_state.meta_client.fetch_campaign_data(
+                start_date=start_date.strftime('%Y-%m-%d'),
+                end_date=end_date.strftime('%Y-%m-%d')
+            )
+            ad_df = st.session_state.meta_client.fetch_ad_performance(
+                start_date=start_date.strftime('%Y-%m-%d'),
+                end_date=end_date.strftime('%Y-%m-%d')
+            )
 
         if campaign_df.empty and ad_df.empty:
             st.error("Keine Daten verfügbar für den gewählten Zeitraum")
@@ -264,7 +328,7 @@ def render_weekly_report():
         ad_df = st.session_state.data_processor.detect_ad_fatigue(ad_df)
 
         with st.spinner("🤖 Google Gemini analysiert Performance..."):
-            date_range = f"{datetime.now() - timedelta(days=days):%d.%m.%Y} - {datetime.now():%d.%m.%Y}"
+            date_range = f"{start_date.strftime('%d.%m.%Y')} - {end_date.strftime('%d.%m.%Y')}"
             analysis = st.session_state.ai_analyzer.analyze_weekly_performance(
                 campaign_df, ad_df, date_range
             )
@@ -771,6 +835,182 @@ _Brandea GbR_
                 st.info("Lead-Qualifizierung und Follow-up Tracking kommt bald!")
 
 
+def render_ai_chat():
+    """Render interactive AI chat assistant"""
+    st.markdown("## 💬 AI Chat Assistant mit Google Gemini")
+    st.markdown("### Interaktive Beratung für deine Meta Ads Kampagnen")
+
+    # Refresh button
+    render_refresh_button()
+
+    st.markdown("---")
+
+    # System Prompt Editor
+    with st.expander("🔧 System-Prompt anzeigen/bearbeiten", expanded=False):
+        st.markdown("**Aktueller System-Prompt:**")
+
+        default_chat_prompt = f"""Du bist ein professioneller Meta Ads Berater für {Config.get('COMPANY_NAME', 'CarCenter Landshut')}.
+
+WICHTIGER KONTEXT:
+- Branche: Automotive - FAHRZEUG-ANKAUF (wir kaufen Autos, wir verkaufen nicht!)
+- Standort: Landshut und Umgebung
+- Zielgruppe: Privatpersonen die ihr Auto verkaufen wollen
+- Ziel: Lead-Generierung für Auto-Ankauf
+
+DEINE AUFGABE:
+- Beantworte Fragen zu Meta Ads Performance
+- Gib konkrete Handlungsempfehlungen
+- Analysiere Kampagnen-Daten
+- Schlage Content-Ideen für Auto-ANKAUF vor (nicht Verkauf!)
+- Helfe bei Ad-Optimierung
+- Erkläre Metriken (CPL, Hook Rate, Hold Rate, etc.)
+
+WICHTIG:
+- Immer Perspektive ANKÄUFER (wir kaufen Autos)
+- CTAs: "Auto verkaufen", "Angebot anfordern", etc.
+- Seriös, professionell, datengetrieben
+- Konkrete Zahlen und Beispiele nutzen
+- Keine verbotenen Claims ("garantiert", "beste", etc.)
+
+Antworte auf Deutsch, präzise und umsetzbar."""
+
+        if 'custom_chat_prompt' not in st.session_state:
+            st.session_state.custom_chat_prompt = default_chat_prompt
+
+        custom_prompt = st.text_area(
+            "Bearbeite den System-Prompt nach deinen Bedürfnissen:",
+            value=st.session_state.custom_chat_prompt,
+            height=300
+        )
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("💾 Prompt speichern"):
+                st.session_state.custom_chat_prompt = custom_prompt
+                st.success("✅ System-Prompt gespeichert!")
+
+        with col2:
+            if st.button("🔄 Auf Standard zurücksetzen"):
+                st.session_state.custom_chat_prompt = default_chat_prompt
+                st.success("✅ Auf Standard-Prompt zurückgesetzt!")
+
+    st.markdown("---")
+
+    # Chat interface
+    st.markdown("### 💬 Chat mit Gemini")
+
+    # Initialize chat history
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+
+    # Display chat history
+    chat_container = st.container()
+
+    with chat_container:
+        for message in st.session_state.chat_history:
+            if message['role'] == 'user':
+                st.markdown(f"""
+                <div style='background-color: #E3F2FD; padding: 15px; border-radius: 10px; margin: 10px 0;'>
+                    <strong>👤 Du:</strong><br>{message['content']}
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div style='background-color: #F5F5F5; padding: 15px; border-radius: 10px; margin: 10px 0;'>
+                    <strong>🤖 Gemini:</strong><br>{message['content']}
+                </div>
+                """, unsafe_allow_html=True)
+
+    # Quick action buttons
+    st.markdown("#### 🚀 Schnelle Fragen:")
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        if st.button("📊 Wie kann ich CPL senken?"):
+            user_input = "Wie kann ich meinen Cost-per-Lead (CPL) senken? Gib mir konkrete, umsetzbare Tipps."
+
+    with col2:
+        if st.button("🎯 Content-Ideen für Ankauf"):
+            user_input = "Gib mir 5 kreative Content-Ideen für Auto-Ankauf Ads. Denk daran: Wir kaufen Autos, wir verkaufen nicht!"
+
+    with col3:
+        if st.button("⚠️ Warum niedrige Hook Rate?"):
+            user_input = "Meine Hook Rate ist niedrig. Was kann ich tun, um mehr Aufmerksamkeit in den ersten 3 Sekunden zu bekommen?"
+
+    # Chat input
+    st.markdown("---")
+    user_input = st.text_area(
+        "Deine Frage an Gemini:",
+        placeholder="z.B. 'Analysiere meine Top 3 Kampagnen und gib mir Verbesserungsvorschläge'",
+        key="chat_input"
+    )
+
+    col1, col2, col3 = st.columns([1, 1, 4])
+
+    with col1:
+        send_button = st.button("📤 Senden", type="primary", use_container_width=True)
+
+    with col2:
+        if st.button("🗑️ Chat löschen", use_container_width=True):
+            st.session_state.chat_history = []
+            st.rerun()
+
+    if send_button and user_input:
+        # Add user message to history
+        st.session_state.chat_history.append({
+            'role': 'user',
+            'content': user_input
+        })
+
+        # Get AI response
+        with st.spinner("🤖 Gemini denkt nach..."):
+            try:
+                # Build conversation context
+                conversation = st.session_state.custom_chat_prompt + "\n\n"
+
+                # Add chat history for context
+                for msg in st.session_state.chat_history[-5:]:  # Last 5 messages for context
+                    if msg['role'] == 'user':
+                        conversation += f"\nUser: {msg['content']}\n"
+                    else:
+                        conversation += f"\nAssistant: {msg['content']}\n"
+
+                # Get response from Gemini
+                response = st.session_state.ai_analyzer._generate_content(conversation)
+
+                # Add AI response to history
+                st.session_state.chat_history.append({
+                    'role': 'assistant',
+                    'content': response
+                })
+
+                # Rerun to show new messages
+                st.rerun()
+
+            except Exception as e:
+                st.error(f"❌ Fehler bei der AI-Antwort: {str(e)}")
+
+    # Export chat
+    if st.session_state.chat_history:
+        st.markdown("---")
+        st.markdown("### 📥 Chat exportieren")
+
+        # Create markdown export
+        chat_export = f"# AI Chat Session - {datetime.now().strftime('%d.%m.%Y %H:%M')}\n\n"
+        for message in st.session_state.chat_history:
+            if message['role'] == 'user':
+                chat_export += f"## 👤 User\n{message['content']}\n\n"
+            else:
+                chat_export += f"## 🤖 Gemini\n{message['content']}\n\n"
+
+        st.download_button(
+            "📄 Als Markdown exportieren",
+            chat_export,
+            file_name=f"ai_chat_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
+            mime="text/markdown"
+        )
+
+
 def render_settings():
     """Render settings page"""
     st.markdown("## ⚙️ Settings")
@@ -864,6 +1104,8 @@ def main():
         render_leads_dashboard()
     elif page == "💡 Content Strategy":
         render_content_strategy()
+    elif page == "💬 AI Chat Assistant":
+        render_ai_chat()
     elif page == "⚙️ Settings":
         render_settings()
 

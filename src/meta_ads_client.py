@@ -90,17 +90,26 @@ class MetaAdsClient:
         except Exception as e:
             logger.error(f"Failed to save cache: {str(e)}")
 
-    def fetch_campaign_data(self, days: int = 7) -> pd.DataFrame:
+    def fetch_campaign_data(self, days: int = 7, start_date: Optional[str] = None, end_date: Optional[str] = None) -> pd.DataFrame:
         """
-        Fetch campaign performance data
+        Fetch campaign performance data with custom date range
 
         Args:
-            days: Number of days to look back
+            days: Number of days to look back (if start_date/end_date not provided)
+            start_date: Start date in YYYY-MM-DD format (optional)
+            end_date: End date in YYYY-MM-DD format (optional, defaults to TODAY)
 
         Returns:
             DataFrame with campaign metrics
         """
-        cache_key = f"campaigns_{days}d"
+        # Calculate date range - INCLUDE TODAY!
+        if not end_date:
+            end_date = datetime.now().strftime('%Y-%m-%d')  # TODAY!
+
+        if not start_date:
+            start_date = (datetime.now() - timedelta(days=days-1)).strftime('%Y-%m-%d')
+
+        cache_key = f"campaigns_{start_date}_{end_date}"
         cached_data = self._load_from_cache(cache_key)
 
         if cached_data is not None:
@@ -111,7 +120,11 @@ class MetaAdsClient:
             return self._get_mock_campaign_data(days)
 
         try:
-            date_preset = 'last_7d' if days == 7 else 'last_30d'
+            # Use time_range instead of date_preset to include TODAY!
+            time_range = {
+                'since': start_date,
+                'until': end_date
+            }
 
             campaigns = self.account.get_campaigns(fields=[
                 Campaign.Field.name,
@@ -121,7 +134,7 @@ class MetaAdsClient:
             campaign_data = []
             for campaign in campaigns:
                 insights = campaign.get_insights(
-                    params={'date_preset': date_preset},
+                    params={'time_range': time_range},
                     fields=[
                         'campaign_name',
                         'spend',
@@ -166,17 +179,26 @@ class MetaAdsClient:
             logger.error(f"Error fetching campaign data: {str(e)}")
             return self._get_mock_campaign_data(days)
 
-    def fetch_ad_performance(self, days: int = 7) -> pd.DataFrame:
+    def fetch_ad_performance(self, days: int = 7, start_date: Optional[str] = None, end_date: Optional[str] = None) -> pd.DataFrame:
         """
-        Fetch ad-level performance data with video metrics
+        Fetch ad-level performance data with video metrics and custom date range
 
         Args:
-            days: Number of days to look back
+            days: Number of days to look back (if start_date/end_date not provided)
+            start_date: Start date in YYYY-MM-DD format (optional)
+            end_date: End date in YYYY-MM-DD format (optional, defaults to TODAY)
 
         Returns:
             DataFrame with ad metrics including hook rate and hold rate
         """
-        cache_key = f"ads_{days}d"
+        # Calculate date range - INCLUDE TODAY!
+        if not end_date:
+            end_date = datetime.now().strftime('%Y-%m-%d')  # TODAY!
+
+        if not start_date:
+            start_date = (datetime.now() - timedelta(days=days-1)).strftime('%Y-%m-%d')
+
+        cache_key = f"ads_{start_date}_{end_date}"
         cached_data = self._load_from_cache(cache_key)
 
         if cached_data is not None:
@@ -187,7 +209,11 @@ class MetaAdsClient:
             return self._get_mock_ad_data(days)
 
         try:
-            date_preset = 'last_7d' if days == 7 else 'last_30d'
+            # Use time_range instead of date_preset to include TODAY!
+            time_range = {
+                'since': start_date,
+                'until': end_date
+            }
 
             ads = self.account.get_ads(fields=[
                 Ad.Field.name,
@@ -197,7 +223,7 @@ class MetaAdsClient:
             ad_data = []
             for ad in ads:
                 insights = ad.get_insights(
-                    params={'date_preset': date_preset},
+                    params={'time_range': time_range},
                     fields=[
                         'ad_name',
                         'spend',
@@ -402,9 +428,14 @@ class MetaAdsClient:
             logger.error(f"Error fetching leads: {str(e)}")
             return pd.DataFrame()
 
-    def fetch_live_data(self, days: int = 7) -> Dict:
+    def fetch_live_data(self, days: int = 7, start_date: Optional[str] = None, end_date: Optional[str] = None) -> Dict:
         """
         Fetch LIVE data - bypasses cache completely!
+
+        Args:
+            days: Number of days to look back
+            start_date: Start date in YYYY-MM-DD format (optional)
+            end_date: End date in YYYY-MM-DD format (optional, defaults to TODAY)
 
         Returns:
             Dict with campaigns, ads, and leads
@@ -414,11 +445,11 @@ class MetaAdsClient:
         # Clear cache first for truly fresh data
         self.clear_cache()
 
-        # Fetch fresh campaign data
-        campaigns = self.fetch_campaign_data(days=days)
+        # Fetch fresh campaign data with custom date range
+        campaigns = self.fetch_campaign_data(days=days, start_date=start_date, end_date=end_date)
 
-        # Fetch fresh ad data
-        ads = self.fetch_ad_performance(days=days)
+        # Fetch fresh ad data with custom date range
+        ads = self.fetch_ad_performance(days=days, start_date=start_date, end_date=end_date)
 
         # Fetch fresh leads
         leads = self.fetch_leads_data(days=days, force_refresh=True)
@@ -427,6 +458,8 @@ class MetaAdsClient:
             'campaigns': campaigns,
             'ads': ads,
             'leads': leads,
+            'start_date': start_date or (datetime.now() - timedelta(days=days-1)).strftime('%Y-%m-%d'),
+            'end_date': end_date or datetime.now().strftime('%Y-%m-%d'),
             'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
 

@@ -56,49 +56,65 @@ Du bist Meta Ads Creative Strategist für {company_name}.
 
 TOP PERFORMERS: {top_ads}
 STRATEGIE: {strategy_type}
-BRANCHE: Automotive/Gebrauchtwagen
-ZIELGRUPPE: Landshut und Umgebung
+BRANCHE: Automotive - FAHRZEUG-ANKAUF (NICHT Verkauf!)
+ZIELGRUPPE: Privatpersonen in Landshut und Umgebung, die ihr Auto VERKAUFEN wollen
+ZIEL: Menschen die ihr Auto verkaufen wollen zu Leads konvertieren
+
+⚠️ WICHTIG: Wir sind der KÄUFER! Wir kaufen Autos an - wir verkaufen nicht!
 
 Generiere:
 
 1. STATISCHE BEITRÄGE (5 Varianten)
 Je Beitrag:
 - TEXT AUF BILD: Max 7 Worte, Hook-fokussiert
+  * Beispiele: "Auto verkaufen in 24h?", "Sofort-Ankauf Landshut", "Wir kaufen dein Auto"
 - CAPTION: 50-100 Worte nach AIDA-Formel
-  * Attention: Starker Hook
-  * Interest: Problem/Benefit
-  * Desire: Social Proof/FOMO
-  * Action: Klarer CTA
+  * Attention: Hook für Auto-VERKÄUFER (nicht Käufer!)
+  * Interest: Vorteile vom Verkauf an uns (schnell, fair, unkompliziert)
+  * Desire: Social Proof (andere haben bereits verkauft)
+  * Action: Formular ausfüllen für Ankaufs-Angebot
 - VISUAL BESCHREIBUNG: Was genau im Bild zu sehen sein soll
-- TARGETING-TIPP: Welche Zielgruppe passt am besten
+  * Fokus: Zufriedene Verkäufer, Geld-Übergabe, schneller Prozess
+- TARGETING-TIPP: Menschen die Auto loswerden wollen (Umzug, Neuwagen-Kauf, etc.)
 
 2. REEL-KONZEPTE (3 Varianten)
 Je Reel:
 - TITEL: Catchy, max 50 Zeichen
+  * Beispiele: "Auto verkaufen ohne Stress", "Sofort-Ankauf erklärt"
 - DAUER: 15-20 Sekunden
 - FRAME-BY-FRAME (mit Timing):
-  * Frame 1 (0-3s): Hook - Was passiert
-  * Frame 2 (3-6s): Problem aufzeigen
-  * Frame 3 (6-12s): Lösung präsentieren
-  * Frame 4 (12-15s): Social Proof/Trust
-  * Frame 5 (15-20s): Starker CTA
-- VOICE-OVER: Kompletter Sprechtext
-- MUSIK: Energetisch/Ruhig/Emotional
+  * Frame 1 (0-3s): Hook - "Du willst dein Auto verkaufen?"
+  * Frame 2 (3-6s): Problem - Private Verkauf ist stressig/zeitaufwändig
+  * Frame 3 (6-12s): Lösung - Wir kaufen sofort, fairer Preis, ohne Verhandeln
+  * Frame 4 (12-15s): Prozess - Formular → Angebot → Geld → Fertig
+  * Frame 5 (15-20s): CTA - "Jetzt Angebot anfordern"
+- VOICE-OVER: Kompletter Sprechtext (Perspektive: Ankäufer spricht zu Verkäufer)
+- MUSIK: Vertrauensvoll, seriös, beruhigend
 - ON-SCREEN-TEXT: Text-Overlays pro Frame
 
 3. STORY-IDEEN (2 Varianten)
 Je Story:
-- KONZEPT: Hauptidee in 1 Satz
+- KONZEPT: Hauptidee in 1 Satz (immer aus Ankäufer-Perspektive!)
+  * Beispiele: "So einfach verkaufst du dein Auto", "3 Gründe warum Kunden uns wählen"
 - 3-5 STORY FRAMES: Was in jedem Slide passiert
-- INTERACTIVE ELEMENTS: Umfragen, Fragen, Swipe-Ups
+  * Fokus: Verkaufs-Prozess zeigen, Vertrauen aufbauen
+- INTERACTIVE ELEMENTS:
+  * Umfragen: "Planst du Auto zu verkaufen?", "Was ist dir wichtig: Preis oder Schnelligkeit?"
+  * Quiz: "Wie viel ist dein Auto noch wert?"
 - TIMING: Wie lange jeder Slide
 
 WICHTIGE COMPLIANCE-REGELN:
-- Keine Claims wie "garantiert", "beste", "billigste"
-- Nur "faire Preise", "attraktive Konditionen"
-- Urgency durch Deadline: "Nur bis 30.11."
-- Lokaler Bezug: "In Landshut", "Aus der Region"
-- Seriös aber emotional ansprechend
+- Keine Claims wie "höchster Preis garantiert", "beste Konditionen"
+- Nur "fairer Ankaufspreis", "marktgerechte Bewertung", "attraktives Angebot"
+- Urgency: "Schnelle Abwicklung", "Angebot binnen 24h"
+- Lokaler Bezug: "Ankauf in Landshut", "Aus der Region für die Region"
+- Seriös und vertrauensvoll (wichtig beim Ankauf!)
+
+PERSPEKTIVE CHECK:
+✅ Wir sind der KÄUFER (Ankäufer)
+✅ Zielgruppe sind VERKÄUFER (Privatpersonen mit Auto)
+✅ CTA = "Auto verkaufen", "Angebot anfordern", "Jetzt bewerten lassen"
+❌ NICHT: "Auto kaufen", "Fahrzeug finden", "Probefahrt"
 
 OUTPUT FORMAT: Markdown mit klaren Überschriften
 """
