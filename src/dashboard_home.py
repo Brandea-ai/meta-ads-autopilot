@@ -22,6 +22,23 @@ def extract_action_value(actions, action_type):
     return 0
 
 
+def extract_result_value(result_data):
+    """
+    Extract value from complex result structure
+    Format: [{'indicator': '...', 'values': [{'value': '3', ...}]}]
+    """
+    if isinstance(result_data, list) and len(result_data) > 0:
+        first_result = result_data[0]
+        if isinstance(first_result, dict):
+            values = first_result.get('values', [])
+            if isinstance(values, list) and len(values) > 0:
+                try:
+                    return float(values[0].get('value', 0))
+                except (ValueError, TypeError, KeyError):
+                    return 0
+    return 0
+
+
 def safe_sum(df, column, default=0):
     """Safely sum a column with error handling"""
     try:
@@ -249,15 +266,11 @@ def render_home_professional(meta_client):
     conv_col1, conv_col2, conv_col3, conv_col4 = st.columns(4)
 
     with conv_col1:
-        # Objective Results
+        # Objective Results - using new extract_result_value function
         total_results = 0
-        try:
-            if 'results' in df.columns:
-                for results_data in df['results']:
-                    if isinstance(results_data, list) and len(results_data) > 0:
-                        total_results += float(results_data[0].get('value', 0))
-        except (ValueError, TypeError, KeyError):
-            total_results = 0
+        if 'results' in df.columns:
+            for results_data in df['results']:
+                total_results += extract_result_value(results_data)
 
         render_kpi_card(
             "🎯 Results",
@@ -268,16 +281,14 @@ def render_home_professional(meta_client):
     with conv_col2:
         # Result Rate (Conversion Rate)
         avg_result_rate = 0
-        try:
-            if 'result_rate' in df.columns:
-                result_rates = []
-                for rate_data in df['result_rate']:
-                    if isinstance(rate_data, list) and len(rate_data) > 0:
-                        result_rates.append(float(rate_data[0].get('value', 0)))
-                if result_rates:
-                    avg_result_rate = sum(result_rates) / len(result_rates)
-        except (ValueError, TypeError, KeyError, ZeroDivisionError):
-            avg_result_rate = 0
+        if 'result_rate' in df.columns:
+            result_rates = []
+            for rate_data in df['result_rate']:
+                val = extract_result_value(rate_data)
+                if val > 0:
+                    result_rates.append(val)
+            if result_rates:
+                avg_result_rate = sum(result_rates) / len(result_rates)
 
         render_kpi_card(
             "📈 Result Rate",
@@ -288,16 +299,14 @@ def render_home_professional(meta_client):
     with conv_col3:
         # Cost per Result
         avg_cost_per_result = 0
-        try:
-            if 'cost_per_result' in df.columns:
-                costs = []
-                for cost_data in df['cost_per_result']:
-                    if isinstance(cost_data, list) and len(cost_data) > 0:
-                        costs.append(float(cost_data[0].get('value', 0)))
-                if costs:
-                    avg_cost_per_result = sum(costs) / len(costs)
-        except (ValueError, TypeError, KeyError, ZeroDivisionError):
-            avg_cost_per_result = 0
+        if 'cost_per_result' in df.columns:
+            costs = []
+            for cost_data in df['cost_per_result']:
+                val = extract_result_value(cost_data)
+                if val > 0:
+                    costs.append(val)
+            if costs:
+                avg_cost_per_result = sum(costs) / len(costs)
 
         render_kpi_card(
             "💵 Cost/Result",
