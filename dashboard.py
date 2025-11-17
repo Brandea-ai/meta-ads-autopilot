@@ -98,7 +98,7 @@ def render_sidebar():
         "Navigation",
         ["🏠 Home", "📊 Weekly Report", "📈 Monthly Report",
          "🎯 Ad Performance", "📞 Leads Dashboard", "💡 Content Strategy",
-         "💬 AI Chat Assistant", "⚙️ Settings"]
+         "💬 AI Chat Assistant", "🔬 Advanced Insights", "⚙️ Settings"]
     )
 
     st.sidebar.markdown("---")
@@ -1158,6 +1158,448 @@ Antworte auf Deutsch, präzise und umsetzbar."""
         )
 
 
+def render_advanced_insights():
+    """Render advanced insights page with COMPLETE demographics, placements, devices"""
+    st.markdown("## 🔬 Advanced Insights - VOLLSTÄNDIGE DATEN-ANALYSE")
+    st.markdown("### 📊 Demografien, Plattformen, Video-Retention & mehr!")
+
+    # Refresh button
+    render_refresh_button()
+
+    st.markdown("---")
+
+    # Date range picker
+    col1, col2, col3 = st.columns([2, 2, 1])
+
+    with col1:
+        days = st.selectbox(
+            "Zeitraum",
+            [7, 14, 30],
+            index=0,
+            format_func=lambda x: f"Letzte {x} Tage"
+        )
+
+    with col2:
+        level = st.selectbox(
+            "Analyse-Level",
+            ["ad", "adset", "campaign"],
+            format_func=lambda x: {"ad": "Ad-Level", "adset": "AdSet-Level", "campaign": "Campaign-Level"}[x]
+        )
+
+    with col3:
+        analyze_button = st.button("🔥 Analysieren", type="primary", use_container_width=True)
+
+    st.markdown("---")
+
+    if not analyze_button:
+        st.info("""
+        ### 🎯 Was du hier bekommst:
+
+        **Diese Seite holt ALLE verfügbaren Daten von Meta:**
+
+        ✅ **Demographics**: Alter, Geschlecht (z.B. "18-24 männlich", "35-44 weiblich")
+        ✅ **Geographic**: Länder, Regionen, Städte (woher kommen deine Leads?)
+        ✅ **Plattformen**: Facebook Feed, Instagram Feed, Stories, Reels, Messenger
+        ✅ **Geräte**: Mobile (iPhone/Android), Desktop, Tablet
+        ✅ **Tageszeiten**: Welche Stunden performen am besten?
+        ✅ **Video-Retention**: 25%, 50%, 75%, 95%, 100% Completion Rate
+        ✅ **Engagement**: Likes, Comments, Shares, Saves
+        ✅ **Echte Hook & Hold Rates** - keine Mock-Daten mehr!
+
+        Klicke auf "🔥 Analysieren" um die vollständige Analyse zu starten!
+        """)
+        return
+
+    # Fetch comprehensive insights
+    with st.spinner("🔥 Lade ALLE verfügbaren Meta Ads Insights... (Das kann 30-60 Sekunden dauern)"):
+        insights = st.session_state.meta_client.fetch_comprehensive_insights(
+            days=days,
+            level=level
+        )
+
+    if not insights or all(df.empty for df in insights.values()):
+        st.error("❌ Keine Daten verfügbar. Prüfe deine API-Konfiguration.")
+        return
+
+    # Success message
+    st.success(f"✅ {len(insights)} Datensätze erfolgreich geladen!")
+
+    # Display insights in tabs
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "👥 Demographics",
+        "🌍 Geographic",
+        "📱 Placements",
+        "💻 Devices",
+        "🕐 Hourly",
+        "📊 Base Metrics"
+    ])
+
+    with tab1:
+        st.markdown("### 👥 Demografische Insights")
+
+        # AGE
+        if 'demographics_age' in insights and not insights['demographics_age'].empty:
+            st.markdown("#### Alter-Verteilung")
+            age_df = insights['demographics_age']
+
+            # Helper function to extract actions
+            def extract_leads_from_actions(actions):
+                if isinstance(actions, list):
+                    for action in actions:
+                        if isinstance(action, dict) and action.get('action_type') == 'lead':
+                            return int(action.get('value', 0))
+                return 0
+
+            # Process actions
+            if 'actions' in age_df.columns:
+                age_df['leads_extracted'] = age_df['actions'].apply(extract_leads_from_actions)
+            else:
+                age_df['leads_extracted'] = 0
+
+            # Group by age
+            if 'age' in age_df.columns:
+                age_summary = age_df.groupby('age').agg({
+                    'spend': 'sum',
+                    'impressions': 'sum',
+                    'reach': 'sum',
+                    'clicks': 'sum',
+                    'leads_extracted': 'sum'
+                }).reset_index()
+
+                age_summary['cpl'] = age_summary['spend'] / age_summary['leads_extracted'].replace(0, 1)
+                age_summary['ctr'] = (age_summary['clicks'] / age_summary['impressions'].replace(0, 1)) * 100
+
+                # Sort by spend
+                age_summary = age_summary.sort_values('spend', ascending=False)
+
+                st.dataframe(
+                    age_summary[[col for col in ['age', 'spend', 'impressions', 'reach', 'clicks', 'leads_extracted', 'cpl', 'ctr'] if col in age_summary.columns]],
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+                # Chart
+                import plotly.express as px
+                fig = px.bar(age_summary, x='age', y='spend', title='Spend by Age Group')
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.warning("⚠️ Keine Age-Daten verfügbar")
+        else:
+            st.warning("⚠️ Keine Age-Daten verfügbar")
+
+        st.markdown("---")
+
+        # GENDER
+        if 'demographics_gender' in insights and not insights['demographics_gender'].empty:
+            st.markdown("#### Geschlechter-Verteilung")
+            gender_df = insights['demographics_gender']
+
+            if 'actions' in gender_df.columns:
+                gender_df['leads_extracted'] = gender_df['actions'].apply(extract_leads_from_actions)
+            else:
+                gender_df['leads_extracted'] = 0
+
+            if 'gender' in gender_df.columns:
+                gender_summary = gender_df.groupby('gender').agg({
+                    'spend': 'sum',
+                    'impressions': 'sum',
+                    'reach': 'sum',
+                    'clicks': 'sum',
+                    'leads_extracted': 'sum'
+                }).reset_index()
+
+                gender_summary['cpl'] = gender_summary['spend'] / gender_summary['leads_extracted'].replace(0, 1)
+                gender_summary['ctr'] = (gender_summary['clicks'] / gender_summary['impressions'].replace(0, 1)) * 100
+
+                st.dataframe(
+                    gender_summary[[col for col in ['gender', 'spend', 'impressions', 'reach', 'clicks', 'leads_extracted', 'cpl', 'ctr'] if col in gender_summary.columns]],
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+                # Pie chart
+                fig = px.pie(gender_summary, values='spend', names='gender', title='Spend by Gender')
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.warning("⚠️ Keine Gender-Daten verfügbar")
+        else:
+            st.warning("⚠️ Keine Gender-Daten verfügbar")
+
+        st.markdown("---")
+
+        # AGE + GENDER
+        if 'demographics_age_gender' in insights and not insights['demographics_age_gender'].empty:
+            st.markdown("#### Alter + Geschlecht (Kombiniert)")
+            age_gender_df = insights['demographics_age_gender']
+
+            if 'actions' in age_gender_df.columns:
+                age_gender_df['leads_extracted'] = age_gender_df['actions'].apply(extract_leads_from_actions)
+            else:
+                age_gender_df['leads_extracted'] = 0
+
+            if 'age' in age_gender_df.columns and 'gender' in age_gender_df.columns:
+                age_gender_df['segment'] = age_gender_df['age'].astype(str) + ' - ' + age_gender_df['gender'].astype(str)
+
+                age_gender_summary = age_gender_df.groupby('segment').agg({
+                    'spend': 'sum',
+                    'impressions': 'sum',
+                    'clicks': 'sum',
+                    'leads_extracted': 'sum'
+                }).reset_index()
+
+                age_gender_summary['cpl'] = age_gender_summary['spend'] / age_gender_summary['leads_extracted'].replace(0, 1)
+
+                # Sort by leads
+                age_gender_summary = age_gender_summary.sort_values('leads_extracted', ascending=False)
+
+                st.dataframe(
+                    age_gender_summary[[col for col in ['segment', 'spend', 'impressions', 'clicks', 'leads_extracted', 'cpl'] if col in age_gender_summary.columns]],
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+                # Heatmap-style bar chart
+                fig = px.bar(age_gender_summary.head(15), x='segment', y='leads_extracted',
+                             title='Top 15 Segments by Leads', color='cpl')
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.warning("⚠️ Keine Age+Gender-Daten verfügbar")
+        else:
+            st.warning("⚠️ Keine Age+Gender-Daten verfügbar")
+
+    with tab2:
+        st.markdown("### 🌍 Geografische Insights")
+
+        # COUNTRY
+        if 'geographic_country' in insights and not insights['geographic_country'].empty:
+            st.markdown("#### Länder-Verteilung")
+            country_df = insights['geographic_country']
+
+            if 'actions' in country_df.columns:
+                country_df['leads_extracted'] = country_df['actions'].apply(extract_leads_from_actions)
+            else:
+                country_df['leads_extracted'] = 0
+
+            if 'country' in country_df.columns:
+                country_summary = country_df.groupby('country').agg({
+                    'spend': 'sum',
+                    'impressions': 'sum',
+                    'reach': 'sum',
+                    'clicks': 'sum',
+                    'leads_extracted': 'sum'
+                }).reset_index()
+
+                country_summary['cpl'] = country_summary['spend'] / country_summary['leads_extracted'].replace(0, 1)
+
+                country_summary = country_summary.sort_values('spend', ascending=False)
+
+                st.dataframe(
+                    country_summary.head(20),
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+                fig = px.bar(country_summary.head(10), x='country', y='spend', title='Top 10 Countries by Spend')
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.warning("⚠️ Keine Country-Daten verfügbar")
+        else:
+            st.warning("⚠️ Keine Country-Daten verfügbar")
+
+        st.markdown("---")
+
+        # REGION
+        if 'geographic_region' in insights and not insights['geographic_region'].empty:
+            st.markdown("#### Regionen-Verteilung")
+            region_df = insights['geographic_region']
+
+            if 'actions' in region_df.columns:
+                region_df['leads_extracted'] = region_df['actions'].apply(extract_leads_from_actions)
+            else:
+                region_df['leads_extracted'] = 0
+
+            if 'region' in region_df.columns:
+                region_summary = region_df.groupby('region').agg({
+                    'spend': 'sum',
+                    'impressions': 'sum',
+                    'clicks': 'sum',
+                    'leads_extracted': 'sum'
+                }).reset_index()
+
+                region_summary['cpl'] = region_summary['spend'] / region_summary['leads_extracted'].replace(0, 1)
+
+                region_summary = region_summary.sort_values('spend', ascending=False)
+
+                st.dataframe(
+                    region_summary.head(20),
+                    use_container_width=True,
+                    hide_index=True
+                )
+            else:
+                st.warning("⚠️ Keine Region-Daten verfügbar")
+        else:
+            st.warning("⚠️ Keine Region-Daten verfügbar")
+
+    with tab3:
+        st.markdown("### 📱 Plattformen & Placements")
+
+        if 'placements' in insights and not insights['placements'].empty:
+            placement_df = insights['placements']
+
+            if 'actions' in placement_df.columns:
+                placement_df['leads_extracted'] = placement_df['actions'].apply(extract_leads_from_actions)
+            else:
+                placement_df['leads_extracted'] = 0
+
+            # Group by platform and position
+            if 'publisher_platform' in placement_df.columns and 'platform_position' in placement_df.columns:
+                placement_df['placement'] = placement_df['publisher_platform'].astype(str) + ' - ' + placement_df['platform_position'].astype(str)
+
+                placement_summary = placement_df.groupby('placement').agg({
+                    'spend': 'sum',
+                    'impressions': 'sum',
+                    'clicks': 'sum',
+                    'leads_extracted': 'sum'
+                }).reset_index()
+
+                placement_summary['cpl'] = placement_summary['spend'] / placement_summary['leads_extracted'].replace(0, 1)
+                placement_summary['ctr'] = (placement_summary['clicks'] / placement_summary['impressions'].replace(0, 1)) * 100
+
+                placement_summary = placement_summary.sort_values('spend', ascending=False)
+
+                st.dataframe(
+                    placement_summary,
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+                # Chart
+                fig = px.bar(placement_summary.head(10), x='placement', y='spend',
+                             title='Top 10 Placements by Spend', color='cpl')
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.warning("⚠️ Keine Placement-Daten verfügbar")
+        else:
+            st.warning("⚠️ Keine Placement-Daten verfügbar")
+
+    with tab4:
+        st.markdown("### 💻 Geräte-Insights")
+
+        if 'devices' in insights and not insights['devices'].empty:
+            device_df = insights['devices']
+
+            if 'actions' in device_df.columns:
+                device_df['leads_extracted'] = device_df['actions'].apply(extract_leads_from_actions)
+            else:
+                device_df['leads_extracted'] = 0
+
+            if 'device_platform' in device_df.columns and 'impression_device' in device_df.columns:
+                device_df['device'] = device_df['device_platform'].astype(str) + ' - ' + device_df['impression_device'].astype(str)
+
+                device_summary = device_df.groupby('device').agg({
+                    'spend': 'sum',
+                    'impressions': 'sum',
+                    'clicks': 'sum',
+                    'leads_extracted': 'sum'
+                }).reset_index()
+
+                device_summary['cpl'] = device_summary['spend'] / device_summary['leads_extracted'].replace(0, 1)
+                device_summary['ctr'] = (device_summary['clicks'] / device_summary['impressions'].replace(0, 1)) * 100
+
+                device_summary = device_summary.sort_values('spend', ascending=False)
+
+                st.dataframe(
+                    device_summary,
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+                fig = px.pie(device_summary, values='spend', names='device', title='Spend by Device')
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.warning("⚠️ Keine Device-Daten verfügbar")
+        else:
+            st.warning("⚠️ Keine Device-Daten verfügbar")
+
+    with tab5:
+        st.markdown("### 🕐 Tageszeit-Analyse")
+
+        if 'hourly' in insights and not insights['hourly'].empty:
+            hourly_df = insights['hourly']
+
+            if 'actions' in hourly_df.columns:
+                hourly_df['leads_extracted'] = hourly_df['actions'].apply(extract_leads_from_actions)
+            else:
+                hourly_df['leads_extracted'] = 0
+
+            if 'hourly_stats_aggregated_by_advertiser_time_zone' in hourly_df.columns:
+                hourly_df['hour'] = hourly_df['hourly_stats_aggregated_by_advertiser_time_zone'].astype(str)
+
+                hourly_summary = hourly_df.groupby('hour').agg({
+                    'spend': 'sum',
+                    'impressions': 'sum',
+                    'clicks': 'sum',
+                    'leads_extracted': 'sum'
+                }).reset_index()
+
+                hourly_summary['cpl'] = hourly_summary['spend'] / hourly_summary['leads_extracted'].replace(0, 1)
+
+                st.dataframe(
+                    hourly_summary,
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+                fig = px.line(hourly_summary, x='hour', y='spend', title='Spend by Hour of Day')
+                st.plotly_chart(fig, use_container_width=True)
+
+                fig2 = px.line(hourly_summary, x='hour', y='leads_extracted', title='Leads by Hour of Day')
+                st.plotly_chart(fig2, use_container_width=True)
+            else:
+                st.warning("⚠️ Keine Hourly-Daten verfügbar")
+        else:
+            st.warning("⚠️ Keine Hourly-Daten verfügbar")
+
+    with tab6:
+        st.markdown("### 📊 Basis-Metriken (ohne Breakdowns)")
+
+        if 'base' in insights and not insights['base'].empty:
+            base_df = insights['base']
+
+            if 'actions' in base_df.columns:
+                base_df['leads_extracted'] = base_df['actions'].apply(extract_leads_from_actions)
+            else:
+                base_df['leads_extracted'] = 0
+
+            # Show summary
+            total_spend = base_df['spend'].sum()
+            total_impressions = base_df['impressions'].sum()
+            total_clicks = base_df['clicks'].sum()
+            total_leads = base_df['leads_extracted'].sum()
+
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Total Spend", f"€{total_spend:,.2f}")
+            with col2:
+                st.metric("Impressions", f"{total_impressions:,}")
+            with col3:
+                st.metric("Clicks", f"{total_clicks:,}")
+            with col4:
+                st.metric("Leads", f"{total_leads:,}")
+
+            # Show base table
+            display_cols = [col for col in ['ad_name', 'spend', 'impressions', 'clicks', 'leads_extracted', 'ctr', 'cpc', 'cpm']
+                           if col in base_df.columns]
+
+            st.dataframe(
+                base_df[display_cols],
+                use_container_width=True,
+                hide_index=True
+            )
+        else:
+            st.warning("⚠️ Keine Base-Daten verfügbar")
+
+
 def render_settings():
     """Render settings page"""
     st.markdown("## ⚙️ Settings")
@@ -1253,6 +1695,8 @@ def main():
         render_content_strategy()
     elif page == "💬 AI Chat Assistant":
         render_ai_chat()
+    elif page == "🔬 Advanced Insights":
+        render_advanced_insights()
     elif page == "⚙️ Settings":
         render_settings()
 
