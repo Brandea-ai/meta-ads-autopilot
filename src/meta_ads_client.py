@@ -44,9 +44,12 @@ class MetaAdsClient:
             FacebookAdsApi.init(access_token=self.access_token)
             self.account = AdAccount(self.account_id)
             self.api_initialized = True
-            logger.info(f"Meta Ads API initialized for account {self.account_id}")
+            logger.info(f"✅ Meta Ads API initialized for account {self.account_id}")
+            logger.info(f"✅ Token length: {len(self.access_token)} chars")
         except Exception as e:
-            logger.error(f"Failed to initialize Meta Ads API: {str(e)}")
+            logger.error(f"❌ Failed to initialize Meta Ads API: {str(e)}")
+            logger.error(f"❌ This usually means: TOKEN EXPIRED or INVALID PERMISSIONS")
+            logger.error(f"❌ Go to https://developers.facebook.com/tools/explorer/ to generate new token")
             self.api_initialized = False
 
     def _get_cache_path(self, cache_key: str) -> str:
@@ -116,10 +119,12 @@ class MetaAdsClient:
             return pd.DataFrame(cached_data)
 
         if not self.api_initialized:
-            logger.warning("Using mock data - API not initialized")
+            logger.warning("⚠️ Using mock data - API not initialized")
+            logger.warning("⚠️ Check if META_ACCESS_TOKEN and META_AD_ACCOUNT_ID are set in secrets!")
             return self._get_mock_campaign_data(days)
 
         try:
+            logger.info(f"🔍 Fetching REAL campaign data from Meta API (Account: {self.account_id})")
             # Use time_range instead of date_preset to include TODAY!
             time_range = {
                 'since': start_date,
@@ -297,11 +302,19 @@ class MetaAdsClient:
                     })
 
             df = pd.DataFrame(campaign_data)
+
+            if df.empty:
+                logger.warning("⚠️ No campaigns found in Meta account - using mock data")
+            else:
+                logger.info(f"✅ Successfully fetched {len(df)} campaigns from Meta API!")
+
             self._save_to_cache(cache_key, df.to_dict('records'))
             return df
 
         except Exception as e:
-            logger.error(f"Error fetching campaign data: {str(e)}")
+            logger.error(f"❌ Error fetching campaign data: {str(e)}")
+            logger.error(f"❌ Check if your Meta Access Token is still valid!")
+            logger.error(f"❌ Falling back to MOCK DATA")
             return self._get_mock_campaign_data(days)
 
     def fetch_ad_performance(self, days: int = 7, start_date: Optional[str] = None, end_date: Optional[str] = None) -> pd.DataFrame:
