@@ -154,21 +154,44 @@ def render_home():
     elif not ad_df.empty:
         is_using_mock_data = any(name in ad_df['ad_name'].values for name in mock_ad_names)
 
+    # Check API status
+    api_status = st.session_state.meta_client.api_initialized
+
     # Show warning if mock data
-    if is_using_mock_data or (campaign_df.empty and ad_df.empty):
+    if is_using_mock_data:
         st.error("""
-        ⚠️ **WARNUNG: MOCK-DATEN WERDEN ANGEZEIGT!**
+        ⚠️ **WARNUNG: MOCK-DATEN (TESTDATEN) WERDEN ANGEZEIGT!**
 
-        Die Meta Ads API gibt keine Daten zurück. Mögliche Gründe:
-        - 🔑 Access Token ist abgelaufen
-        - 🔒 Fehlende Berechtigungen (ads_read, business_management)
-        - 📊 Keine aktiven Campaigns/Ads im Account
-        - ⚙️ Streamlit Cloud Secrets nicht richtig gesetzt
+        Die Meta Ads API ist verbunden, aber gibt keine echten Daten zurück.
 
-        **Lösung:** Gehe zu [Meta Business Settings](https://business.facebook.com/settings/) und generiere einen neuen Token.
+        **Mögliche Gründe:**
+        - 📊 Deine Campaign hat **KEINE Ausgaben/Impressions** im gewählten Zeitraum (letzte 30 Tage)
+        - 🎯 Campaign ist **pausiert** oder hat **kein Budget**
+        - 📅 Campaign läuft erst in der **Zukunft** ("Nov - DEZ 2025")
+        - 🔑 Token hat **fehlende Permissions** (braucht: ads_read, business_management, leads_retrieval)
+
+        **Was du tun solltest:**
+        1. Prüfe in [Meta Ads Manager](https://www.facebook.com/adsmanager/) ob Campaigns **aktiv** sind
+        2. Prüfe ob Campaigns **Budget haben** und **Ausgaben** tätigen
+        3. Wenn Campaigns erst später starten → Warte bis sie aktiv sind
+
+        **API Status:** {'✅ Verbunden' if api_status else '❌ Nicht verbunden'}
+        """)
+    elif campaign_df.empty and ad_df.empty:
+        st.warning("""
+        ⚠️ **KEINE DATEN VERFÜGBAR**
+
+        Die Meta API ist verbunden, findet aber keine Campaigns mit Daten.
+
+        **Gründe:**
+        - Keine aktiven Campaigns im Account
+        - Campaigns haben keine Ausgaben im Zeitraum (letzte 30 Tage)
+        - Campaigns sind pausiert
+
+        **Lösung:** Erstelle eine Campaign mit Budget oder aktiviere bestehende Campaigns.
         """)
     else:
-        st.success("✅ **ECHTE DATEN von Meta Ads API** werden angezeigt!")
+        st.success(f"✅ **ECHTE DATEN von Meta Ads API!** | {len(campaign_df)} Campaigns, {len(ad_df)} Ads mit Daten")
 
     # Calculate metrics
     total_spend = campaign_df['spend'].sum() if not campaign_df.empty else 0
