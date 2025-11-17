@@ -132,7 +132,17 @@ def render_home_professional(meta_client):
             st.write("**Verfügbare Spalten:**", list(df.columns))
             st.write("**Erste Zeile (Rohformat):**")
             first_row = df.iloc[0].to_dict()
-            for key, value in list(first_row.items())[:10]:  # Erste 10 Felder
+
+            # Show critical numeric fields
+            critical_fields = ['spend', 'impressions', 'reach', 'frequency', 'clicks', 'ctr', 'cpc', 'cpm']
+            st.write("**Kritische numerische Felder:**")
+            for field in critical_fields:
+                if field in first_row:
+                    value = first_row[field]
+                    st.write(f"- **{field}**: {type(value).__name__} = `{repr(value)}`")
+
+            st.write("**Alle Felder (erste 15):**")
+            for key, value in list(first_row.items())[:15]:
                 st.write(f"- **{key}**: {type(value).__name__} = {str(value)[:100]}")
 
     # Extract actions (leads)
