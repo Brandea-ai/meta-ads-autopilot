@@ -1385,8 +1385,33 @@ def render_advanced_insights():
         st.warning("Keine Daten verfügbar für den gewählten Zeitraum. Prüfe ob Ads im gewählten Zeitraum aktiv waren.")
         return
 
-    # Success message
-    st.success(f"✅ {len(insights)} Datensätze erfolgreich geladen!")
+    # Success message with details
+    non_empty_datasets = [name for name, df in insights.items() if not df.empty]
+    empty_datasets = [name for name, df in insights.items() if df.empty]
+
+    st.success(f"✅ {len(non_empty_datasets)} Breakdown-Datensätze geladen!")
+
+    # Show detailed breakdown info
+    with st.expander("📋 Geladene Datensätze - Details", expanded=False):
+        if non_empty_datasets:
+            st.markdown("**✅ Verfügbare Datensätze:**")
+            for name in non_empty_datasets:
+                row_count = len(insights[name])
+                st.markdown(f"- **{name}**: {row_count} Zeilen")
+
+        if empty_datasets:
+            st.markdown("**⚠️ Leere Datensätze (keine Daten für diesen Level/Zeitraum):**")
+            for name in empty_datasets:
+                st.markdown(f"- {name}")
+
+            if level != 'ad':
+                st.info(f"""
+                **💡 Tipp:** Du hast '{level.upper()}'-Level gewählt.
+
+                Viele Breakdowns (Demographics, Geographic, Placements) funktionieren am besten auf **AD-LEVEL**.
+
+                Versuche es nochmal mit "Ad-Level" für vollständige Daten!
+                """)
 
     # Helper function to extract actions - GLOBAL für alle Tabs!
     def extract_leads_from_actions(actions):
