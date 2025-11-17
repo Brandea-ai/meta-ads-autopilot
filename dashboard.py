@@ -285,7 +285,8 @@ def render_weekly_report():
             "Von",
             value=start_date_default,
             max_value=today,
-            disabled=(preset != "Benutzerdefiniert")
+            disabled=(preset != "Benutzerdefiniert"),
+            key="start_date_input"
         )
 
     with col3:
@@ -293,20 +294,31 @@ def render_weekly_report():
             "Bis",
             value=end_date_default,
             max_value=today,
-            min_value=start_date if preset == "Benutzerdefiniert" else None,
-            disabled=(preset != "Benutzerdefiniert")
+            min_value=start_date_default if preset == "Benutzerdefiniert" else None,
+            disabled=(preset != "Benutzerdefiniert"),
+            key="end_date_input"
         )
 
     with col4:
         analyze_button = st.button("🤖 Analysieren", type="primary", use_container_width=True)
 
-    # Show selected range
-    days_selected = (end_date - start_date).days + 1
-    st.caption(f"📊 Ausgewählter Zeitraum: **{days_selected} Tage** ({start_date.strftime('%d.%m.%Y')} - {end_date.strftime('%d.%m.%Y')})")
+    # Show selected range - ensure dates are valid
+    if start_date and end_date:
+        try:
+            days_selected = (end_date - start_date).days + 1
+            st.caption(f"📊 Ausgewählter Zeitraum: **{days_selected} Tage** ({start_date.strftime('%d.%m.%Y')} - {end_date.strftime('%d.%m.%Y')})")
+        except Exception as e:
+            st.error(f"Fehler bei Datumsberechnung: {str(e)}")
+            start_date = start_date_default
+            end_date = end_date_default
+    else:
+        st.warning("Bitte wähle ein gültiges Von/Bis Datum")
+        start_date = start_date_default
+        end_date = end_date_default
 
     st.markdown("---")
 
-    if analyze_button:
+    if analyze_button and start_date and end_date:
         with st.spinner("🔄 Lade Meta Ads Daten..."):
             # Use custom date range with start_date and end_date!
             campaign_df = st.session_state.meta_client.fetch_campaign_data(
