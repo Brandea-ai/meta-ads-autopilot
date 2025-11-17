@@ -1,6 +1,7 @@
 """
 AI Analyzer using Google Gemini
 Generates intelligent insights and recommendations for Meta Ads campaigns
+Version: 2.0 - Fixed KeyError with robust column validation
 """
 import logging
 from typing import Dict, Optional, List
