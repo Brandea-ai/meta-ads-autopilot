@@ -1206,6 +1206,11 @@ def render_advanced_insights():
         ✅ **Engagement**: Likes, Comments, Shares, Saves
         ✅ **Echte Hook & Hold Rates** - keine Mock-Daten mehr!
 
+        **⚠️ WICHTIG:**
+        - **Demographics/Geographic/Placements/Devices** funktionieren NUR auf **AD-LEVEL**!
+        - Wähle "Ad-Level" oben für vollständige Breakdowns
+        - Campaign/AdSet-Level zeigt nur Base Metrics
+
         Klicke auf "🔥 Analysieren" um die vollständige Analyse zu starten!
         """)
         return
@@ -1224,6 +1229,14 @@ def render_advanced_insights():
     # Success message
     st.success(f"✅ {len(insights)} Datensätze erfolgreich geladen!")
 
+    # Helper function to extract actions - GLOBAL für alle Tabs!
+    def extract_leads_from_actions(actions):
+        if isinstance(actions, list):
+            for action in actions:
+                if isinstance(action, dict) and action.get('action_type') == 'lead':
+                    return int(action.get('value', 0))
+        return 0
+
     # Display insights in tabs
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "👥 Demographics",
@@ -1241,14 +1254,6 @@ def render_advanced_insights():
         if 'demographics_age' in insights and not insights['demographics_age'].empty:
             st.markdown("#### Alter-Verteilung")
             age_df = insights['demographics_age']
-
-            # Helper function to extract actions
-            def extract_leads_from_actions(actions):
-                if isinstance(actions, list):
-                    for action in actions:
-                        if isinstance(action, dict) and action.get('action_type') == 'lead':
-                            return int(action.get('value', 0))
-                return 0
 
             # Process actions
             if 'actions' in age_df.columns:
