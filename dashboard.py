@@ -1244,7 +1244,7 @@ def render_advanced_insights():
         )
 
     if not insights or all(df.empty for df in insights.values()):
-        st.error("❌ Keine Daten verfügbar. Prüfe deine API-Konfiguration.")
+        st.warning("Keine Daten verfügbar für den gewählten Zeitraum. Prüfe ob Ads im gewählten Zeitraum aktiv waren.")
         return
 
     # Success message
@@ -1389,9 +1389,9 @@ def render_advanced_insights():
                              title='Top 15 Segments by Leads', color='cpl')
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                st.warning("⚠️ Keine Age+Gender-Daten verfügbar")
+                st.info("Keine Age+Gender-Daten verfügbar für diesen Zeitraum")
         else:
-            st.warning("⚠️ Keine Age+Gender-Daten verfügbar")
+            st.info("Keine Age+Gender-Daten verfügbar für diesen Zeitraum")
 
     with tab2:
         st.markdown("### 🌍 Geografische Insights")
@@ -1428,9 +1428,9 @@ def render_advanced_insights():
                 fig = px.bar(country_summary.head(10), x='country', y='spend', title='Top 10 Countries by Spend')
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                st.warning("⚠️ Keine Country-Daten verfügbar")
+                st.info("Keine Country-Daten verfügbar für diesen Zeitraum")
         else:
-            st.warning("⚠️ Keine Country-Daten verfügbar")
+            st.info("Keine Country-Daten verfügbar für diesen Zeitraum")
 
         st.markdown("---")
 
@@ -1462,9 +1462,9 @@ def render_advanced_insights():
                     hide_index=True
                 )
             else:
-                st.warning("⚠️ Keine Region-Daten verfügbar")
+                st.info("Keine Region-Daten verfügbar für diesen Zeitraum")
         else:
-            st.warning("⚠️ Keine Region-Daten verfügbar")
+            st.info("Keine Region-Daten verfügbar für diesen Zeitraum")
 
     with tab3:
         st.markdown("### 📱 Plattformen & Placements")
@@ -1504,9 +1504,9 @@ def render_advanced_insights():
                              title='Top 10 Placements by Spend', color='cpl')
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                st.warning("⚠️ Keine Placement-Daten verfügbar")
+                st.info("Keine Placement-Daten verfügbar für diesen Zeitraum")
         else:
-            st.warning("⚠️ Keine Placement-Daten verfügbar")
+            st.info("Keine Placement-Daten verfügbar für diesen Zeitraum")
 
     with tab4:
         st.markdown("### 💻 Geräte-Insights")
@@ -1543,9 +1543,9 @@ def render_advanced_insights():
                 fig = px.pie(device_summary, values='spend', names='device', title='Spend by Device')
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                st.warning("⚠️ Keine Device-Daten verfügbar")
+                st.info("Keine Device-Daten verfügbar für diesen Zeitraum")
         else:
-            st.warning("⚠️ Keine Device-Daten verfügbar")
+            st.info("Keine Device-Daten verfügbar für diesen Zeitraum")
 
     with tab5:
         st.markdown("### 🕐 Tageszeit-Analyse")
@@ -1582,9 +1582,9 @@ def render_advanced_insights():
                 fig2 = px.line(hourly_summary, x='hour', y='leads_extracted', title='Leads by Hour of Day')
                 st.plotly_chart(fig2, use_container_width=True)
             else:
-                st.warning("⚠️ Keine Hourly-Daten verfügbar")
+                st.info("Keine Hourly-Daten verfügbar für diesen Zeitraum")
         else:
-            st.warning("⚠️ Keine Hourly-Daten verfügbar")
+            st.info("Keine Hourly-Daten verfügbar für diesen Zeitraum")
 
     with tab6:
         st.markdown("### 📊 Basis-Metriken (ohne Breakdowns)")
@@ -1597,11 +1597,26 @@ def render_advanced_insights():
             else:
                 base_df['leads_extracted'] = 0
 
-            # Show summary - SAFE conversion
-            total_spend = float(base_df['spend'].sum()) if 'spend' in base_df.columns else 0.0
-            total_impressions = int(base_df['impressions'].sum()) if 'impressions' in base_df.columns else 0
-            total_clicks = int(base_df['clicks'].sum()) if 'clicks' in base_df.columns else 0
-            total_leads = int(base_df['leads_extracted'].sum()) if 'leads_extracted' in base_df.columns else 0
+            # Show summary - SAFE conversion with error handling
+            try:
+                total_spend = float(base_df['spend'].sum()) if 'spend' in base_df.columns and not base_df['spend'].isna().all() else 0.0
+            except (ValueError, TypeError):
+                total_spend = 0.0
+
+            try:
+                total_impressions = int(base_df['impressions'].sum()) if 'impressions' in base_df.columns and not base_df['impressions'].isna().all() else 0
+            except (ValueError, TypeError):
+                total_impressions = 0
+
+            try:
+                total_clicks = int(base_df['clicks'].sum()) if 'clicks' in base_df.columns and not base_df['clicks'].isna().all() else 0
+            except (ValueError, TypeError):
+                total_clicks = 0
+
+            try:
+                total_leads = int(base_df['leads_extracted'].sum()) if 'leads_extracted' in base_df.columns and not base_df['leads_extracted'].isna().all() else 0
+            except (ValueError, TypeError):
+                total_leads = 0
 
             col1, col2, col3, col4 = st.columns(4)
             with col1:
@@ -1623,7 +1638,7 @@ def render_advanced_insights():
                 hide_index=True
             )
         else:
-            st.warning("⚠️ Keine Base-Daten verfügbar")
+            st.info("Keine Base-Daten verfügbar für diesen Zeitraum")
 
 
 def render_settings():
@@ -1651,7 +1666,7 @@ def render_settings():
         if Config.is_configured('META_ACCESS_TOKEN'):
             st.success("✅ Konfiguriert")
         else:
-            st.warning("⚠️ Nicht konfiguriert (Mock-Daten werden verwendet)")
+            st.info("Nicht konfiguriert")
 
     st.markdown("---")
 
@@ -1674,7 +1689,7 @@ def render_settings():
             if st.session_state.meta_client.api_initialized:
                 st.success("✅ Meta Ads API: Initialisiert")
             else:
-                st.warning("⚠️ Meta Ads API: Nicht konfiguriert (Mock-Modus)")
+                st.info("Meta Ads API: Nicht konfiguriert")
 
     st.markdown("---")
 
