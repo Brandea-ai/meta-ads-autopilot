@@ -50,6 +50,30 @@ def safe_int(value, default=0):
         return default
 
 
+def extract_numeric_value(value, default=0):
+    """
+    Extract numeric value from various Meta API formats
+    Handles: lists like [{"value": "123"}], plain numbers, strings
+    """
+    if value is None:
+        return default
+
+    # If it's a list (Meta API format)
+    if isinstance(value, list):
+        if len(value) > 0 and isinstance(value[0], dict):
+            try:
+                return float(value[0].get('value', default))
+            except (ValueError, TypeError, KeyError):
+                return default
+        return default
+
+    # If it's already a number
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
+
 def render_kpi_card(label, value, delta=None, delta_color="normal", help=None):
     """Render a professional KPI card"""
     st.metric(label=label, value=value, delta=delta, delta_color=delta_color, help=help)
@@ -459,7 +483,15 @@ def render_home_professional(meta_client):
 
     # Group by campaign
     if 'campaign_name' in df.columns:
-        campaign_summary = df.groupby('campaign_name').agg({
+        # Convert all numeric columns to proper float values first
+        numeric_columns = ['spend', 'impressions', 'reach', 'clicks', 'leads', 'ctr', 'cpc', 'cpm']
+        df_clean = df.copy()
+
+        for col in numeric_columns:
+            if col in df_clean.columns:
+                df_clean[col] = df_clean[col].apply(extract_numeric_value)
+
+        campaign_summary = df_clean.groupby('campaign_name').agg({
             'spend': 'sum',
             'impressions': 'sum',
             'reach': 'sum',
