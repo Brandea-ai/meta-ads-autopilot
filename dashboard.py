@@ -960,12 +960,15 @@ def render_ai_chat():
     metrics_summary = ""
 
     if load_data:
-        with st.spinner("📥 Lade aktuelle Meta Ads Daten..."):
+        with st.spinner("📥 Lade ALLE Meta Ads Daten inkl. Advanced Insights..."):
             try:
-                # Get fresh data
+                # Get fresh data - BASIC
                 campaign_df = st.session_state.meta_client.fetch_campaign_data(days=days_context)
                 ad_df = st.session_state.meta_client.fetch_ad_performance(days=days_context)
                 leads_df = st.session_state.meta_client.fetch_leads_data(days=days_context)
+
+                # Get ADVANCED INSIGHTS - Demographics, Geographic, Placements, etc.
+                advanced_insights = st.session_state.meta_client.fetch_comprehensive_insights(days=days_context, level='ad')
 
                 # Convert strings to numbers
                 campaign_df = convert_meta_strings_to_numbers(campaign_df)
@@ -1086,6 +1089,67 @@ def render_ai_chat():
 - Anzahl Leads (Forms): {len(leads_df) if not leads_df.empty else 0}
 """
 
+                # ADD ADVANCED INSIGHTS CONTEXT (Demographics, Geographic, Placements, etc.)
+                advanced_context = ""
+                if advanced_insights and not all(df.empty for df in advanced_insights.values()):
+                    advanced_context = f"\n\n{'='*80}\n🔬 ADVANCED INSIGHTS - DEMOGRAFIEN, GEOGRAFISCH, PLACEMENTS:\n{'='*80}\n"
+
+                    # DEMOGRAPHICS - AGE + GENDER
+                    if 'demographics_age_gender' in advanced_insights and not advanced_insights['demographics_age_gender'].empty:
+                        demo_df = advanced_insights['demographics_age_gender']
+
+                        # Extract leads
+                        def extract_leads_adv(actions):
+                            if isinstance(actions, list):
+                                for action in actions:
+                                    if isinstance(action, dict) and action.get('action_type') == 'lead':
+                                        return int(action.get('value', 0))
+                            return 0
+
+                        demo_df['leads'] = demo_df['actions'].apply(extract_leads_adv)
+                        demo_df['segment'] = demo_df['age'].astype(str) + ' | ' + demo_df['gender'].astype(str)
+
+                        demo_summary = demo_df.groupby('segment').agg({
+                            'spend': 'sum',
+                            'impressions': 'sum',
+                            'leads': 'sum'
+                        }).reset_index()
+                        demo_summary = demo_summary.sort_values('spend', ascending=False).head(10)
+
+                        advanced_context += "\n👥 TOP 10 DEMOGRAFIEN (Alter + Geschlecht):\n"
+                        advanced_context += demo_summary.to_markdown(index=False, floatfmt=".2f") + "\n"
+
+                    # GEOGRAPHIC - COUNTRY + REGION
+                    if 'geographic_country' in advanced_insights and not advanced_insights['geographic_country'].empty:
+                        geo_df = advanced_insights['geographic_country']
+                        geo_df['leads'] = geo_df['actions'].apply(extract_leads_adv)
+
+                        geo_summary = geo_df.groupby('country').agg({
+                            'spend': 'sum',
+                            'impressions': 'sum',
+                            'leads': 'sum'
+                        }).reset_index()
+                        geo_summary = geo_summary.sort_values('spend', ascending=False)
+
+                        advanced_context += "\n🌍 LÄNDER:\n"
+                        advanced_context += geo_summary.to_markdown(index=False, floatfmt=".2f") + "\n"
+
+                    # PLACEMENTS
+                    if 'placements' in advanced_insights and not advanced_insights['placements'].empty:
+                        place_df = advanced_insights['placements']
+                        place_df['leads'] = place_df['actions'].apply(extract_leads_adv)
+                        place_df['placement'] = place_df['publisher_platform'].astype(str) + ' - ' + place_df['platform_position'].astype(str)
+
+                        place_summary = place_df.groupby('placement').agg({
+                            'spend': 'sum',
+                            'impressions': 'sum',
+                            'leads': 'sum'
+                        }).reset_index()
+                        place_summary = place_summary.sort_values('spend', ascending=False)
+
+                        advanced_context += "\n📱 PLACEMENTS (Plattformen):\n"
+                        advanced_context += place_summary.to_markdown(index=False, floatfmt=".2f") + "\n"
+
                 # Show data preview
                 with st.expander("👁️ Geladene Daten anzeigen", expanded=False):
                     st.markdown("**Gemini hat Zugriff auf:**")
@@ -1096,6 +1160,8 @@ def render_ai_chat():
                         st.markdown(ad_context)
                     if leads_context:
                         st.markdown(leads_context)
+                    if advanced_context:
+                        st.markdown(advanced_context)
 
             except Exception as e:
                 st.error(f"Fehler beim Laden der Daten: {str(e)}")
@@ -1267,6 +1333,9 @@ Antworte auf Deutsch, präzise und umsetzbar."""
 
                     if leads_context:
                         conversation += leads_context
+
+                    if advanced_context:
+                        conversation += advanced_context
 
                     conversation += "\n" + "="*60 + "\n"
                     conversation += "WICHTIG: Nutze diese AKTUELLEN Daten für deine Antwort!\n"
