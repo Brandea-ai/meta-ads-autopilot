@@ -968,7 +968,12 @@ def render_ai_chat():
                 leads_df = st.session_state.meta_client.fetch_leads_data(days=days_context)
 
                 # Get ADVANCED INSIGHTS - Demographics, Geographic, Placements, etc.
-                advanced_insights = st.session_state.meta_client.fetch_comprehensive_insights(days=days_context, level='ad')
+                try:
+                    advanced_insights = st.session_state.meta_client.fetch_comprehensive_insights(days=days_context, level='ad')
+                    logger.info(f"Advanced insights fetched: {len(advanced_insights) if advanced_insights else 0} datasets")
+                except Exception as e:
+                    logger.error(f"Error fetching advanced insights: {str(e)}")
+                    advanced_insights = {}
 
                 # Convert strings to numbers
                 campaign_df = convert_meta_strings_to_numbers(campaign_df)
@@ -1164,7 +1169,11 @@ def render_ai_chat():
                         st.markdown(advanced_context)
 
             except Exception as e:
-                st.error(f"Fehler beim Laden der Daten: {str(e)}")
+                st.error(f"❌ FEHLER beim Laden der Daten!")
+                st.error(f"Error: {str(e)}")
+                import traceback
+                with st.expander("🐛 Full Error Details"):
+                    st.code(traceback.format_exc())
                 load_data = False
 
     st.markdown("---")
