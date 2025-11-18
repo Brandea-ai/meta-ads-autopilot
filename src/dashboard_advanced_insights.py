@@ -448,30 +448,39 @@ def render_advanced_insights_professional(meta_client):
                     hide_index=True
                 )
 
-                # Charts
-                chart_col1, chart_col2 = st.columns(2)
+                # Charts - only if data is available
+                if not hourly_summary.empty and 'hour' in hourly_summary.columns and 'spend' in hourly_summary.columns:
+                    chart_col1, chart_col2 = st.columns(2)
 
-                with chart_col1:
-                    fig = px.line(
-                        hourly_summary,
-                        x='hour',
-                        y='spend',
-                        title='Spend by Hour',
-                        markers=True
-                    )
-                    fig.update_layout(xaxis_tickangle=-45)
-                    st.plotly_chart(fig, use_container_width=True)
+                    with chart_col1:
+                        try:
+                            fig = px.line(
+                                hourly_summary,
+                                x='hour',
+                                y='spend',
+                                title='Spend by Hour',
+                                markers=True
+                            )
+                            fig.update_layout(xaxis_tickangle=-45)
+                            st.plotly_chart(fig, use_container_width=True)
+                        except Exception as e:
+                            st.error(f"Fehler beim Erstellen des Charts: {str(e)}")
 
-                with chart_col2:
-                    fig = px.bar(
-                        hourly_summary,
-                        x='hour',
-                        y='leads_extracted',
-                        title='Leads by Hour',
-                        color='cpl' if 'cpl' in hourly_summary.columns else None
-                    )
-                    fig.update_layout(xaxis_tickangle=-45)
-                    st.plotly_chart(fig, use_container_width=True)
+                    with chart_col2:
+                        try:
+                            fig = px.bar(
+                                hourly_summary,
+                                x='hour',
+                                y='leads_extracted',
+                                title='Leads by Hour',
+                                color='cpl' if 'cpl' in hourly_summary.columns else None
+                            )
+                            fig.update_layout(xaxis_tickangle=-45)
+                            st.plotly_chart(fig, use_container_width=True)
+                        except Exception as e:
+                            st.error(f"Fehler beim Erstellen des Charts: {str(e)}")
+                else:
+                    st.info("Nicht genügend Daten für Chart-Visualisierung")
 
     st.markdown("---")
     st.success("✅ Advanced Insights komplett - alle 12 Breakdowns analysiert!")
