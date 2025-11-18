@@ -975,12 +975,4 @@ class MetaAdsClient:
 
         except Exception as e:
             logger.error(f"❌ Error fetching comprehensive insights: {str(e)}")
-            import traceback
-            logger.error(traceback.format_exc())
-            # Return error info in results so dashboard can display it
-            return {
-                'error': pd.DataFrame([{
-                    'error_message': str(e),
-                    'traceback': traceback.format_exc()
-                }])
-            }
+            return {}

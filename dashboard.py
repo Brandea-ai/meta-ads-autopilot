@@ -1376,46 +1376,10 @@ def render_advanced_insights():
 
     # Fetch comprehensive insights
     with st.spinner("🔥 Lade ALLE verfügbaren Meta Ads Insights... (Das kann 30-60 Sekunden dauern)"):
-        try:
-            insights = st.session_state.meta_client.fetch_comprehensive_insights(
-                days=days,
-                level=level
-            )
-
-            # DEBUG OUTPUT
-            st.markdown("### 🐛 DEBUG INFO")
-            st.code(f"""
-Level: {level}
-Days: {days}
-Total Datasets Returned: {len(insights) if insights else 0}
-
-Dataset Details:
-""")
-
-            if insights:
-                # Check for error
-                if 'error' in insights:
-                    st.error("❌ FEHLER beim Fetch von Meta API!")
-                    error_df = insights['error']
-                    if not error_df.empty:
-                        st.code(f"Error: {error_df.iloc[0]['error_message']}")
-                        with st.expander("🐛 Full Traceback"):
-                            st.code(error_df.iloc[0]['traceback'])
-                    return
-
-                for name, df in insights.items():
-                    st.code(f"{name}: {len(df)} rows, {len(df.columns) if not df.empty else 0} columns")
-                    if not df.empty:
-                        st.code(f"Columns: {list(df.columns)[:15]}")
-                        st.code(f"Sample data (first row):\n{df.head(1).to_dict('records')}")
-            else:
-                st.error("❌ insights is None or empty!")
-
-        except Exception as e:
-            st.error(f"❌ EXCEPTION beim Fetch: {str(e)}")
-            import traceback
-            st.code(traceback.format_exc())
-            insights = {}
+        insights = st.session_state.meta_client.fetch_comprehensive_insights(
+            days=days,
+            level=level
+        )
 
     if not insights or all(df.empty for df in insights.values()):
         st.warning("Keine Daten verfügbar für den gewählten Zeitraum. Prüfe ob Ads im gewählten Zeitraum aktiv waren.")
