@@ -1393,6 +1393,16 @@ Dataset Details:
 """)
 
             if insights:
+                # Check for error
+                if 'error' in insights:
+                    st.error("❌ FEHLER beim Fetch von Meta API!")
+                    error_df = insights['error']
+                    if not error_df.empty:
+                        st.code(f"Error: {error_df.iloc[0]['error_message']}")
+                        with st.expander("🐛 Full Traceback"):
+                            st.code(error_df.iloc[0]['traceback'])
+                    return
+
                 for name, df in insights.items():
                     st.code(f"{name}: {len(df)} rows, {len(df.columns) if not df.empty else 0} columns")
                     if not df.empty:
